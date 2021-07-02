@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.7">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2021-07-02T04:56:18+01:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">JamBlog</title><subtitle>I'm Jamie, also known as JamBot! This is just where I'll document various impulsive ideas and projects of mine. I like computers and some other stuff :) 
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.7">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2021-07-02T05:11:27+01:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">JamBlog</title><subtitle>I'm Jamie, also known as JamBot! This is just where I'll document various impulsive ideas and projects of mine. I like computers and some other stuff :) 
 </subtitle><author><name>JamBot</name></author><entry><title type="html">Discord scammer #1</title><link href="http://localhost:4000/blog/discord-scammer-1" rel="alternate" type="text/html" title="Discord scammer #1" /><published>2021-06-29T00:00:00+01:00</published><updated>2021-06-29T00:00:00+01:00</updated><id>http://localhost:4000/blog/discord-scammer1</id><content type="html" xml:base="http://localhost:4000/blog/discord-scammer-1">&lt;h1 id=&quot;explanation&quot;&gt;Explanation&lt;/h1&gt;
 
 &lt;p&gt;So basically, I’m in a discord server in which I’m a helper for students doing GCSE computer science. In the channel people often talk off-topic about separate computer related stuff, such as projects they’re working on etc. (The reason this is called “#1” is because I see this stuff happen faily often, so I thought I might like to document it 😄) I thought this would make for some funny blog content, as well as lead onto some talk regarding discord’s security&lt;/p&gt;
@@ -162,13 +162,13 @@ https://discord.com/api/webhooks/859395640198692884/y5ib5a3ddVq4zNFBXRo80oEwzjj0
 
 &lt;p&gt;Normally I wouldn’t dox the user’s account like this, as I’d be unsure if it’s really them. But it soon became clear that this was in fact the scammer:&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;https://jambot3000.github.io/assets/images/omg-you-can-spam-a-webhook.png&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://raw.githubusercontent.com/JamBot3000/jambot3000.github.io/main/assets/images/omg-you-can-spam-a-web-hook.png&quot; /&gt;&lt;/p&gt;
 
 &lt;p&gt;I made a poor attempt to keep them talking lol. They ended up inviting me to a server, which only intrigued me more, I felt like I was going down some rabbit hole lol. This server turned out to have not much to do with the person’s operation&lt;/p&gt;
 
 &lt;p&gt;Yea the person made it clear that he was doing some shady business:&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;https://jambot3000.github.io/assets/images/water-profile.png&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://jambot3000.github.io/assets/images/water-profile.png&quot; style=&quot;width:40%&quot; /&gt;&lt;/p&gt;
 
 &lt;p&gt;They also made it clear that they disliked the mysterious person who was sending things to their webhook… 👀&lt;/p&gt;
 
